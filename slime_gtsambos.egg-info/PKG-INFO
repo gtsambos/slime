@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: slime-gtsambos
+Version: 0.1
+Summary: A package that simulates tree sequences with local ancestry information.
+Home-page: tba
+Author: Georgia Tsambos
+Author-email: gtsambos@student.unimelb.edu.au
+License: UNKNOWN
+Description: # SLiMe
+        
+        SLiMe is a package for simulating admixed tree sequences with local ancestry information.
+        
+        SliMe combines two existing tree sequence simulation softwares, *SLiM* and *msprime*. Admixed history is simulated forward-in-time with SLiM, while ancient history of the admixing populations is simulated backwards-in-time with msprime.
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Mac OSX and maybe others
+Description-Content-Type: text/markdown
