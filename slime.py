@@ -85,16 +85,13 @@ class AdmixtureSimulation(object):
         ):
         self.slim_script = slim_script
         self.out_directory = out_directory
+        self.slim_out = None
 
     def go(self):
         """ A wrapper for the admixture simulation."""
-        print(self.out_directory)
-        out_file = self.out_directory + "/" + "recent-history.trees"
-        log_file = self.out_directory + "/" + "recent-history.log"
-        simulate_recent_history(
-            self.slim_script, outFile = out_file, logFile = log_file
-            )
-        ts = tskit.load(out_file)
+        print('Simulating recent history with SLiM...')
+        simulate_recent_history(self.slim_script)
+        ts = tskit.load(self.slim_out)
         return(ts)
 
     def debugger(self):
@@ -110,8 +107,9 @@ class AdmixtureSimulation(object):
             ind = 0
             for line in lines:
                 if string_pre in line and string_post in line:
-                    outFile = line.split(string_pre)[1].split(string_post)[0]
-                    print('SLiM output file:', outFile)
+                    out_file = line.split(string_pre)[1].split(string_post)[0]
+                    self.slim_out = out_file.strip('""')
+                    print('SLiM output file:', self.slim_out)
                     ind = 1
             if ind == 0:
                 print(
@@ -120,20 +118,6 @@ class AdmixtureSimulation(object):
     Please ensure you include a call to 'treeSeqOutput()' at the end of your script.
                     """)
 
-
-
-    #         print(f.read())
-    #         if ".treeSeqOutput(" not in f.read():
-
-#         else:
-#             print('hooray')
-
-#         for 
-        # else:
-        #     string_pre = ".treeSeqOutput("
-        #     string_post = ")"
-        #     outFile = script_as_string.split(string_pre)[1].split(string_post)[0]
-        #     print("Outfile name:", outFile)
 
 
 
