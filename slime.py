@@ -81,8 +81,13 @@ class TreeSequenceToSample(object):
 
 class AdmixtureSimulation(object):
     def __init__(
-        self, slim_script, out_directory = "", populations_to_sample_from= None,
-        sample_sizes = None
+        self, slim_script, 
+        ancient_recombination_rate,
+        ancient_population_configurations,
+        ancient_demographic_events,
+        out_directory = "", 
+        populations_to_sample_from= None,
+        sample_sizes = None,
         ):
         self.slim_script = slim_script
         self.out_directory = out_directory
@@ -93,6 +98,10 @@ class AdmixtureSimulation(object):
             self.need_to_subsample = 1
         else:
             self.need_to_subsample = 0
+        self.ancient_recombination_rate = ancient_recombination_rate
+        self.ancient_population_configurations = ancient_population_configurations
+        self.ancient_demographic_events = ancient_demographic_events
+
 
     def go(self):
         """ A wrapper for the admixture simulation."""
@@ -104,7 +113,16 @@ class AdmixtureSimulation(object):
             ts = TreeSequenceToSample(ts, 
                 populations_to_sample_from = self.populations,
                 sample_sizes = self.sample_sizes)
-            ts.subsample()
+            ts = ts.subsample()
+        # tabs = ts.tables
+        ts = pyslim.SlimTreeSequence.load_tables(ts.tables)
+        print('Simulating ancient history with msprime...')
+        ts = ts.recapitate(
+            recombination_rate = self.ancient_recombination_rate,
+            population_configurations = self.ancient_population_configurations,
+            demographic_events = self.ancient_demographic_events,
+            keep_first_generation = True # needed to get local ancestors
+            )
         return(ts)
 
     def debugger(self):
@@ -144,6 +162,12 @@ class AdmixtureSimulation(object):
                     self.populations[ind])
         else:
             "No subsampling will be performed."
+        # Test 3: demography debugging in recapitation
+        print('Ancient demography:')
+        dd = msprime.DemographyDebugger(
+            population_configurations=self.ancient_population_configurations,
+            demographic_events=self.ancient_demographic_events)
+        dd.print_history()
 
 
 
