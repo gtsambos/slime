@@ -81,17 +81,30 @@ class TreeSequenceToSample(object):
 
 class AdmixtureSimulation(object):
     def __init__(
-        self, slim_script, out_directory = "" 
+        self, slim_script, out_directory = "", populations_to_sample_from= None,
+        sample_sizes = None
         ):
         self.slim_script = slim_script
         self.out_directory = out_directory
         self.slim_out = None
+        self.populations = populations_to_sample_from
+        self.sample_sizes = sample_sizes
+        if self.populations is not None:
+            self.need_to_subsample = 1
+        else:
+            self.need_to_subsample = 0
 
     def go(self):
         """ A wrapper for the admixture simulation."""
         print('Simulating recent history with SLiM...')
         simulate_recent_history(self.slim_script)
         ts = tskit.load(self.slim_out)
+        if self.need_to_subsample:
+            print('Taking samples from present day populations...')
+            ts = TreeSequenceToSample(ts, 
+                populations_to_sample_from = self.populations,
+                sample_sizes = self.sample_sizes)
+            ts.subsample()
         return(ts)
 
     def debugger(self):
@@ -117,6 +130,20 @@ class AdmixtureSimulation(object):
     Oh no, your script does not produce a .trees file!
     Please ensure you include a call to 'treeSeqOutput()' at the end of your script.
                     """)
+        # Test 2: subsampling
+        if self.populations is not None or self.sample_sizes is not None:
+            if len(self.populations) != len(self.sample_sizes):
+                print(
+    """ Subsampling error:
+    The list of populations to sample from must have the same length
+    as the list of sample sizes."""
+    )
+            print("We are sampling:")
+            for ind in range(len(self.populations)):
+                print("-", self.sample_sizes[ind], "individuals from population", 
+                    self.populations[ind])
+        else:
+            "No subsampling will be performed."
 
 
 
