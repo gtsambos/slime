@@ -85,6 +85,7 @@ class AdmixtureSimulation(object):
         ancient_recombination_rate,
         ancient_population_configurations,
         ancient_demographic_events,
+        neutral_mutation_rate = 0,
         out_directory = "", 
         populations_to_sample_from= None,
         sample_sizes = None,
@@ -101,7 +102,7 @@ class AdmixtureSimulation(object):
         self.ancient_recombination_rate = ancient_recombination_rate
         self.ancient_population_configurations = ancient_population_configurations
         self.ancient_demographic_events = ancient_demographic_events
-
+        self.neutral_mutation_rate = neutral_mutation_rate
 
     def go(self):
         """ A wrapper for the admixture simulation."""
@@ -123,6 +124,8 @@ class AdmixtureSimulation(object):
             demographic_events = self.ancient_demographic_events,
             keep_first_generation = True # needed to get local ancestors
             )
+        ts = pyslim.SlimTreeSequence(msprime.mutate(ts, 
+            rate=self.neutral_mutation_rate, keep=True))
         return(ts)
 
     def debugger(self):
@@ -168,6 +171,9 @@ class AdmixtureSimulation(object):
             population_configurations=self.ancient_population_configurations,
             demographic_events=self.ancient_demographic_events)
         dd.print_history()
+        # Test 4: Adding variation
+        # Neutral mutations
+        print('Neutral mutation rate:', self.neutral_mutation_rate)
 
 
 
