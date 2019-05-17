@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 import pandas as pd
 import msprime, pyslim
@@ -86,12 +87,12 @@ class AdmixtureSimulation(object):
         ancient_population_configurations,
         ancient_demographic_events,
         neutral_mutation_rate = 0,
-        out_directory = "", 
+        out_file = None, 
         populations_to_sample_from= None,
         sample_sizes = None,
         ):
         self.slim_script = slim_script
-        self.out_directory = out_directory
+        self.out_file = out_file
         self.slim_out = None
         self.populations = populations_to_sample_from
         self.sample_sizes = sample_sizes
@@ -124,15 +125,18 @@ class AdmixtureSimulation(object):
             demographic_events = self.ancient_demographic_events,
             keep_first_generation = True # needed to get local ancestors
             )
+        print('Adding variation...')
         ts = pyslim.SlimTreeSequence(msprime.mutate(ts, 
             rate=self.neutral_mutation_rate, keep=True))
+        if self.out_file is not None:
+            ts.dump(self.out_file)
         return(ts)
 
     def debugger(self):
         """ A debugger to run before the simulation. """
         # SLiM debugging
         slim = self.slim_script
-        print('\nSLiM file:', slim)
+        print('\nSLiM input file:', slim)
         # Test 1: is an output file saved?
         with open(slim ,'r') as f:
             lines = f.readlines()
@@ -175,8 +179,87 @@ class AdmixtureSimulation(object):
         # Neutral mutations
         print('Neutral mutation rate:', self.neutral_mutation_rate)
 
+class RecentHistory(object):
+    """Creates a SLiM script of recent history that the user
+    can feed into SLiMe."""
+    def __init__(self, outfile='recent-history.slim', model_type='WF'):
+        self.outfile = outfile
+        self.model_type = model_type
+        self.script = """
+initialize(){
+    initializeSLiMModelType("%s");
+    initializeTreeSeq();
+}    
 
-
-
+1 early(){      
+}""" % self.model_type
+    def dump_script(self):
+        return(self.script)
+    
+    def print_script(self):
+        print(self.script)
+        
+    def time_already_in_script(self, generation, time):
+        if not (time == 'early' or time == 'late'):
+            StringError("The event time must be either 'early' or 'late'.")
+        gen_time = "%i %s()" % (generation, time)
+        return(gen_time in self.script)
+    
+    def find_event_index(self, generation, time, INSERT_AT_START):
+        """Finds the index of the script at which a new event should
+        be inserted."""
+        gen_time = "%i %s(){" % (generation, time)
+        gen_location = self.script.find("%s" % gen_time)
+        start_loc = gen_location + len(gen_time)
+        if INSERT_AT_START:
+            return(start_loc)
+        else:
+            rest_of_script = self.script[start_loc:]
+            end_loc = rest_of_script.find('\n}')
+            return(start_loc + end_loc)
+               
+    def find_time_index(self, generation, time):
+        """Finds the index of the script at which a new generation and
+        time should be inserted."""
+        regex = re.compile(r"\d+ \bearly\b\(\)\{|\d+ \blate\b\(\)\{")
+        times = regex.findall(self.script)
+        gen_regex =re.compile(r"\d+")
+        time_regex=re.compile(r"\bearly\b|\blate\b")
+        BREAK_TRIGGERED = 0
+        for m in times:
+            current_gen = int(gen_regex.search(m).group())
+            current_time = time_regex.search(m).group()
+            if current_gen > generation or (current_gen == generation and time == 'early'):
+                BREAK_TRIGGERED = 1
+                break
+        if BREAK_TRIGGERED:
+            gen_time = "%i %s(){" % (current_gen, current_time)
+            gen_location = self.script.find("%s" % gen_time)
+        else:
+            gen_location = len(self.script)
+        return(gen_location, BREAK_TRIGGERED)
+        
+    def add_event(self, generation, time, event, start=False):
+        if not self.time_already_in_script(generation, time):
+            time_ind, NOT_AT_END = self.find_time_index(generation, time)
+            if NOT_AT_END:
+                new_script = self.script[:time_ind] + """%i %s(){
+}
+""" % (generation, time) + "\n" + self.script[time_ind:]
+            else:
+                new_script = self.script + "\n" + """
+%i %s(){
+}""" % (generation, time)
+            self.script = new_script
+        event_ind = self.find_event_index(generation, time, start)
+        new_script = self.script[:event_ind] + """
+    %s""" % event + ";" + self.script[event_ind:]
+        self.script = new_script
+        
+    def add_simulation_end(self, generation):
+        command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
+        self.add_event(generation, "late", command_to_save_out)
+        self.add_event(generation, "late", "sim.simulationFinished()")
+        
 
 
