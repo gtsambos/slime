@@ -239,27 +239,57 @@ initialize(){
     def find_time_index(self, generation, time):
         """Finds the index of the script at which a new generation and
         time should be inserted."""
-        regex = re.compile(r"\d+ \bearly\b\(\)\{|\d+ \blate\b\(\)\{")
-        times = regex.findall(self.script)
+        times = self.all_generations_and_times()
+        all_early_or_late_events = self.all_early_or_late_events()
+        # times = all_early_or_late_events
+
+        # regex = re.compile(r"\d+ \bearly\b\(\)\{|\d+ \blate\b\(\)\{|\d+:\d+ \{")
+        # times = regex.findall(self.script)
         gen_regex =re.compile(r"\d+")
         time_regex=re.compile(r"\bearly\b|\blate\b")
         BREAK_TRIGGERED = 0
         for m in times:
             current_gen = int(gen_regex.search(m).group())
-            current_time = time_regex.search(m).group()
-            if current_gen > generation or (current_gen == generation and time == 'early'):
+            if current_gen > generation:
+                BREAK_TRIGGERED = 1
+                break
+            elif current_gen == generation and "late" in m and time == "early":
                 BREAK_TRIGGERED = 1
                 break
         if BREAK_TRIGGERED:
-            gen_time = "%i %s(){" % (current_gen, current_time)
-            gen_location = self.script.find("%s" % gen_time)
+            gen_location = self.script.find("%s" % m)
         else:
             gen_location = len(self.script)
         return(gen_location, BREAK_TRIGGERED)
         
     def add_event(self, generation, time, event, start=False):
-        # if generation == self.final_gen and time == 'late' and start == False:
-            # raise SLiMError('Cannot add events after the end of the simulation.')
+        # check whether an existing range of times must be broken up.
+        for start, end in self.all_continuous_processes():
+            event_range = "%i:%i {" % (start, end)
+            existing_events = self.all_events_at_a_given_time(event_range[:-2])
+            regex = re.compile(event_range)
+            BREAK_TRIGGERED = 0
+            if generation == start:
+                if start + 1 < end:
+                    new_script = regex.sub("%i:%i {" % (start + 1, end), self.script)
+                else:
+                    new_script = regex.sub("%i early(){" % end, self.script)
+                BREAK_TRIGGERED = 1
+            elif start < generation and generation < end:
+                break
+            elif generation == end:
+                if start + 1 < end:
+                    new_script = regex.sub("%i:%i {" % (start, end - 1), self.script)
+                else:
+                    new_script = regex.sub("%i early(){" % start, self.script)
+                BREAK_TRIGGERED = 1
+            if BREAK_TRIGGERED:
+                self.script = new_script
+                for e in existing_events:
+                    self.add_event(generation, time, e)  
+                break              
+
+        # Check for existing event at that time.
         if not self.time_already_in_script(generation, time):
             time_ind, NOT_AT_END = self.find_time_index(generation, time)
             if NOT_AT_END:
@@ -280,11 +310,17 @@ initialize(){
         time_ind, NOT_AT_END = self.find_time_index(start, 'early')
         if not NOT_AT_END:
             raise ValueError("End generation is after the end of the simulation.")
-        new_script = self.script[:time_ind] + """%i:%i {
+        # See if range is already in script.
+        regex = re.compile("%i:%i {" % (start, end))
+        ALREADY_IN_SCRIPT = regex.findall(self.script)
+        if ALREADY_IN_SCRIPT:
+            pass
+        else:
+            new_script = self.script[:time_ind] + """%i:%i {
     %s;
 }
 """ % (start, end, event) + "\n" + self.script[time_ind:]
-        self.script = new_script 
+            self.script = new_script 
 
     def add_continuous_process(self, start, end, event):
         """
@@ -314,6 +350,46 @@ initialize(){
         for start, end in missing_ranges:
             self.add_event_over_time_range(start, end, event)
 
+    def gen_in_range(self, gen, start, end):
+        return(start <= gen and gen <= end)
+
+    def all_generations_and_times(self):
+        regex = re.compile(r"\d+ \bearly\b|\d+ \blate\b|\d+:\d")
+        return(regex.findall(self.script))
+
+    def all_early_events(self):
+        regex = re.compile(r"\d+ \bearly\b")
+        return(regex.findall(self.script))
+
+    def all_late_events(self):
+        regex = re.compile(r"\d+ \blate\b")
+        return(regex.findall(self.script))
+
+    def all_early_or_late_events(self):
+        regex = re.compile(r"\d+ \bearly\b|\d+ \blate\b")
+        return(regex.findall(self.script))
+
+    def all_continuous_processes(self):
+        regex = re.compile("\d+:\d")
+        ranges = regex.findall(self.script)
+        to_return = []
+        for range in ranges:
+            gens = re.compile("\d")
+            pair = gens.findall(range)
+            to_return.append((int(pair[0]), int(pair[1])))
+        return(to_return)
+
+    def all_events_at_a_given_time(self, time):
+        assert time in self.all_generations_and_times()
+        ind = self.script.find(time)
+        script_shortened = self.script[ind:]
+        start_ind = script_shortened.find('{')
+        end_ind = script_shortened.find('}')
+        all_events_str = script_shortened[start_ind + 1:end_ind]
+        all_events_list = all_events_str.split(";")
+        all_events_list = [i.strip() for i in all_events_list]
+        all_events_list = [i for i in all_events_list if len(i) > 0]
+        return(all_events_list)
         
     # why isn't this working - check out later
     # def add_simulation_end(self, generation):
@@ -327,11 +403,19 @@ initialize(){
         sample_size = popConfig.sample_size
         initial_size = popConfig.initial_size
         growth_rate = np.exp(popConfig.growth_rate)
+        if popConfig.growth_rate != 0:
+            return ValueError('At this stage, only the admixed population can have continuously changing population size.')
         self.sample_sizes.append(sample_size)
         self.initial_sizes.append(initial_size)
         self.growth_rates.append(growth_rate)
         self.population_labels.append(popLabel)
         ind = len(self.population_labels) - 1
-        self.add_event(1, 'early', "sim.addSubpop(%i, %i)" % (ind, initial_size))
+        self.add_event(1, 'early', "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
+        if growth_rate != 1:
+            self.add_continuous_process(start = 1, end = self.final_gen, 
+                event = "newSize = asInteger(p\"%i\".individualCount * %f" % (ind, growth_rate))
+
+    def is_continuous(time):
+        return(time.find(":"))
 
 
