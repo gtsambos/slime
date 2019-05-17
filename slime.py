@@ -5,6 +5,14 @@ import pandas as pd
 import msprime, pyslim
 import tskit # for now, this is my local version of tskit.
 
+class SLiMError(Exception):
+    """ Errors in the SLiM script that are likely to prevent the simulation 
+    from completing.
+    """
+    def __init__(self, message):
+        # self.expression = expression
+        self.message = message
+
 def simulate_recent_history(file, outFile = "recent-history.trees", logFile = "recent-history.log"):
     """
     Simulates genomic history from the start of admixture until
@@ -182,7 +190,7 @@ class AdmixtureSimulation(object):
 class RecentHistory(object):
     """Creates a SLiM script of recent history that the user
     can feed into SLiMe."""
-    def __init__(self, outfile='recent-history.slim', model_type='WF'):
+    def __init__(self, final_gen, outfile='recent-history.slim', model_type='WF'):
         self.outfile = outfile
         self.model_type = model_type
         self.script = """
@@ -193,6 +201,16 @@ initialize(){
 
 1 early(){      
 }""" % self.model_type
+        self.final_gen = final_gen
+        command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
+        self.add_event(final_gen, "late", command_to_save_out)
+        self.add_event(final_gen, "late", "sim.simulationFinished()")
+        self.number_of_reference_populations = 0
+        self.sample_sizes = []
+        self.initial_sizes = []
+        self.growth_rates = []
+        self.population_labels = []
+
     def dump_script(self):
         return(self.script)
     
@@ -240,6 +258,8 @@ initialize(){
         return(gen_location, BREAK_TRIGGERED)
         
     def add_event(self, generation, time, event, start=False):
+        # if generation == self.final_gen and time == 'late' and start == False:
+            # raise SLiMError('Cannot add events after the end of the simulation.')
         if not self.time_already_in_script(generation, time):
             time_ind, NOT_AT_END = self.find_time_index(generation, time)
             if NOT_AT_END:
@@ -255,11 +275,63 @@ initialize(){
         new_script = self.script[:event_ind] + """
     %s""" % event + ";" + self.script[event_ind:]
         self.script = new_script
+
+    def add_event_over_time_range(self, start, end, event):
+        time_ind, NOT_AT_END = self.find_time_index(start, 'early')
+        if not NOT_AT_END:
+            raise ValueError("End generation is after the end of the simulation.")
+        new_script = self.script[:time_ind] + """%i:%i {
+    %s;
+}
+""" % (start, end, event) + "\n" + self.script[time_ind:]
+        self.script = new_script 
+
+    def add_continuous_process(self, start, end, event):
+        """
+        Adds an event to each generation in the specified range.
+        """
+        missing_gens = []
+        gen_range = [i for i in np.arange(start, end + 1)]
+        for gen in gen_range:
+            if self.time_already_in_script(gen, 'early'):
+                self.add_event(gen, 'early', event)
+            elif self.time_already_in_script(gen, 'late'):
+                self.add_event(gen, 'late', event, gen == self.final_gen)
+            else:
+                missing_gens.append(gen)
+        # Process the remaining generations. See helpful answer at
+        # https://stackoverflow.com/questions/2154249/identify-groups-of-continuous-numbers-in-a-list
+        def gen_groups():
+            first = last = missing_gens[0]
+            for gen in missing_gens[1:]:
+                if gen == last + 1:
+                    last = gen
+                else:
+                    yield first, last
+                    first = last = gen
+            yield first, last
+        missing_ranges = list(gen_groups())
+        for start, end in missing_ranges:
+            self.add_event_over_time_range(start, end, event)
+
         
-    def add_simulation_end(self, generation):
-        command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
-        self.add_event(generation, "late", command_to_save_out)
-        self.add_event(generation, "late", "sim.simulationFinished()")
-        
+    # why isn't this working - check out later
+    # def add_simulation_end(self, generation):
+    #     command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
+    #     self.add_event(generation, "late", command_to_save_out)
+    #     self.add_event(generation, "late", "sim.simulationFinished()")
+
+    def add_reference_population(self, popConfig, popLabel):
+        if not isinstance(popConfig, msprime.PopulationConfiguration):
+            TypeError("popConfig must be a msprime.PopulationConfiguration object.")
+        sample_size = popConfig.sample_size
+        initial_size = popConfig.initial_size
+        growth_rate = np.exp(popConfig.growth_rate)
+        self.sample_sizes.append(sample_size)
+        self.initial_sizes.append(initial_size)
+        self.growth_rates.append(growth_rate)
+        self.population_labels.append(popLabel)
+        ind = len(self.population_labels) - 1
+        self.add_event(1, 'early', "sim.addSubpop(%i, %i)" % (ind, initial_size))
 
 
