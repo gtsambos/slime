@@ -203,8 +203,8 @@ initialize(){
 }""" % self.model_type
         self.final_gen = final_gen
         command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
-        self.add_event(final_gen, "late", command_to_save_out)
-        self.add_event(final_gen, "late", "sim.simulationFinished()")
+        self.add_event((final_gen, "late"), command_to_save_out)
+        self.add_event((final_gen, "late"), "sim.simulationFinished()")
         self.number_of_reference_populations = 0
         self.sample_sizes = []
         self.initial_sizes = []
@@ -216,17 +216,35 @@ initialize(){
     
     def print_script(self):
         print(self.script)
+
+    def time_is_continuous(self, time):
+        if len(time) == 2:
+            # print(time[0])
+            if not isinstance(time[0], (int, np.integer)):
+                raise TypeError('Generation number must be an integer.')
+            if isinstance(time[1], (int, np.integer)):
+                return(True)
+            elif time[1] == 'early' or time[1] == 'late':
+                return(False)
+            else:
+                raise ValueError('Time is not in correct format.')
+        elif isinstance(time, (int, np.integer)):
+            return(False)
+        else:
+            raise ValueError('Time is not in correct format.')
+
         
-    def time_already_in_script(self, generation, time):
-        if not (time == 'early' or time == 'late'):
-            StringError("The event time must be either 'early' or 'late'.")
-        gen_time = "%i %s()" % (generation, time)
-        return(gen_time in self.script)
+    def time_already_in_script(self, time):
+        if not self.time_is_continuous(time):
+            gen_time = "%i %s()" % (time[0], time[1])
+            return(gen_time in self.script)
+        else:
+            pass
     
-    def find_event_index(self, generation, time, INSERT_AT_START):
+    def find_event_index(self, time, INSERT_AT_START):
         """Finds the index of the script at which a new event should
         be inserted."""
-        gen_time = "%i %s(){" % (generation, time)
+        gen_time = "%i %s(){" % (time[0], time[1])
         gen_location = self.script.find("%s" % gen_time)
         start_loc = gen_location + len(gen_time)
         if INSERT_AT_START:
@@ -236,34 +254,38 @@ initialize(){
             end_loc = rest_of_script.find('\n}')
             return(start_loc + end_loc)
                
-    def find_time_index(self, generation, time):
+    def find_time_index(self, time):
         """Finds the index of the script at which a new generation and
         time should be inserted."""
+        generation = time[0]
         times = self.all_generations_and_times()
         all_early_or_late_events = self.all_early_or_late_events()
-        # times = all_early_or_late_events
 
         # regex = re.compile(r"\d+ \bearly\b\(\)\{|\d+ \blate\b\(\)\{|\d+:\d+ \{")
         # times = regex.findall(self.script)
         gen_regex =re.compile(r"\d+")
-        time_regex=re.compile(r"\bearly\b|\blate\b")
-        BREAK_TRIGGERED = 0
-        for m in times:
-            current_gen = int(gen_regex.search(m).group())
-            if current_gen > generation:
-                BREAK_TRIGGERED = 1
-                break
-            elif current_gen == generation and "late" in m and time == "early":
-                BREAK_TRIGGERED = 1
-                break
-        if BREAK_TRIGGERED:
-            gen_location = self.script.find("%s" % m)
+        if not self.time_is_continuous(time):
+            time_regex=re.compile(r"\bearly\b|\blate\b")
+            BREAK_TRIGGERED = 0
+            for m in times:
+                current_gen = int(gen_regex.search(m).group())
+                if current_gen > generation:
+                    BREAK_TRIGGERED = 1
+                    break
+                elif current_gen == generation and "late" in m and time[1] == "early":
+                    BREAK_TRIGGERED = 1
+                    break
+            if BREAK_TRIGGERED:
+                gen_location = self.script.find("%s" % m)
+            else:
+                gen_location = len(self.script)
+            return(gen_location, BREAK_TRIGGERED)
         else:
-            gen_location = len(self.script)
-        return(gen_location, BREAK_TRIGGERED)
-        
-    def add_event(self, generation, time, event, start=False):
+            return(len(self.script), 1)
+
+    def add_event(self, time, event, start=False):
         # check whether an existing range of times must be broken up.
+        generation = time[0]
         for start, end in self.all_continuous_processes():
             event_range = "%i:%i {" % (start, end)
             existing_events = self.all_events_at_a_given_time(event_range[:-2])
@@ -286,28 +308,28 @@ initialize(){
             if BREAK_TRIGGERED:
                 self.script = new_script
                 for e in existing_events:
-                    self.add_event(generation, time, e)  
+                    self.add_event((time[0], time[1]), e)  
                 break              
 
         # Check for existing event at that time.
-        if not self.time_already_in_script(generation, time):
-            time_ind, NOT_AT_END = self.find_time_index(generation, time)
+        if not self.time_already_in_script(time):
+            time_ind, NOT_AT_END = self.find_time_index(time)
             if NOT_AT_END:
                 new_script = self.script[:time_ind] + """%i %s(){
 }
-""" % (generation, time) + "\n" + self.script[time_ind:]
+""" % (time[0], time[1]) + "\n" + self.script[time_ind:]
             else:
                 new_script = self.script + "\n" + """
 %i %s(){
-}""" % (generation, time)
+}""" % (time[0], time[1])
             self.script = new_script
-        event_ind = self.find_event_index(generation, time, start)
+        event_ind = self.find_event_index((time[0], time[1]), start)
         new_script = self.script[:event_ind] + """
     %s""" % event + ";" + self.script[event_ind:]
         self.script = new_script
 
     def add_event_over_time_range(self, start, end, event):
-        time_ind, NOT_AT_END = self.find_time_index(start, 'early')
+        time_ind, NOT_AT_END = self.find_time_index((start, 'early'))
         if not NOT_AT_END:
             raise ValueError("End generation is after the end of the simulation.")
         # See if range is already in script.
@@ -322,17 +344,19 @@ initialize(){
 """ % (start, end, event) + "\n" + self.script[time_ind:]
             self.script = new_script 
 
-    def add_continuous_process(self, start, end, event):
+    def add_continuous_process(self, time, event):
         """
         Adds an event to each generation in the specified range.
         """
+        start = time[0]
+        end = time[1]
         missing_gens = []
         gen_range = [i for i in np.arange(start, end + 1)]
         for gen in gen_range:
-            if self.time_already_in_script(gen, 'early'):
-                self.add_event(gen, 'early', event)
-            elif self.time_already_in_script(gen, 'late'):
-                self.add_event(gen, 'late', event, gen == self.final_gen)
+            if self.time_already_in_script((gen, 'early')):
+                self.add_event((gen, 'early'), event)
+            elif self.time_already_in_script((gen, 'late')):
+                self.add_event((gen, 'late'), event, gen == self.final_gen)
             else:
                 missing_gens.append(gen)
         # Process the remaining generations. See helpful answer at
@@ -348,7 +372,8 @@ initialize(){
             yield first, last
         missing_ranges = list(gen_groups())
         for start, end in missing_ranges:
-            self.add_event_over_time_range(start, end, event)
+            time = (start, end)
+            self.add_event_over_time_range(time[0], time[1], event)
 
     def gen_in_range(self, gen, start, end):
         return(start <= gen and gen <= end)
@@ -391,31 +416,31 @@ initialize(){
         all_events_list = [i for i in all_events_list if len(i) > 0]
         return(all_events_list)
         
-    # why isn't this working - check out later
-    # def add_simulation_end(self, generation):
-    #     command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
-    #     self.add_event(generation, "late", command_to_save_out)
-    #     self.add_event(generation, "late", "sim.simulationFinished()")
+#     # why isn't this working - check out later
+#     # def add_simulation_end(self, generation):
+#     #     command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
+#     #     self.add_event(generation, "late", command_to_save_out)
+#     #     self.add_event(generation, "late", "sim.simulationFinished()")
 
-    def add_reference_population(self, popConfig, popLabel):
-        if not isinstance(popConfig, msprime.PopulationConfiguration):
-            TypeError("popConfig must be a msprime.PopulationConfiguration object.")
-        sample_size = popConfig.sample_size
-        initial_size = popConfig.initial_size
-        growth_rate = np.exp(popConfig.growth_rate)
-        if popConfig.growth_rate != 0:
-            return ValueError('At this stage, only the admixed population can have continuously changing population size.')
-        self.sample_sizes.append(sample_size)
-        self.initial_sizes.append(initial_size)
-        self.growth_rates.append(growth_rate)
-        self.population_labels.append(popLabel)
-        ind = len(self.population_labels) - 1
-        self.add_event(1, 'early', "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
-        if growth_rate != 1:
-            self.add_continuous_process(start = 1, end = self.final_gen, 
-                event = "newSize = asInteger(p\"%i\".individualCount * %f" % (ind, growth_rate))
+#     def add_reference_population(self, popConfig, popLabel):
+#         if not isinstance(popConfig, msprime.PopulationConfiguration):
+#             TypeError("popConfig must be a msprime.PopulationConfiguration object.")
+#         sample_size = popConfig.sample_size
+#         initial_size = popConfig.initial_size
+#         growth_rate = np.exp(popConfig.growth_rate)
+#         if popConfig.growth_rate != 0:
+#             return ValueError('At this stage, only the admixed population can have continuously changing population size.')
+#         self.sample_sizes.append(sample_size)
+#         self.initial_sizes.append(initial_size)
+#         self.growth_rates.append(growth_rate)
+#         self.population_labels.append(popLabel)
+#         ind = len(self.population_labels) - 1
+#         self.add_event(1, 'early', "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
+#         if growth_rate != 1:
+#             self.add_continuous_process(start = 1, end = self.final_gen, 
+#                 event = "newSize = asInteger(p\"%i\".individualCount * %f" % (ind, growth_rate))
 
-    def is_continuous(time):
-        return(time.find(":"))
+#     def is_continuous(time):
+#         return(time.find(":"))
 
 
