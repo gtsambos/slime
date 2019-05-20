@@ -132,10 +132,11 @@ class TestRecentHistoryGenerator(unittest.TestCase):
         scr.add_event((4, 'early'), event = 'event')
         self.assertEqual(scr.all_generations_and_times(),
             ['1 early', '3 early', '4 early', '5 late'])
-        # scr.print_script()
-
-#         #     'first')
-
+        scr = slime.RecentHistory(final_gen = 10)
+        scr.add_continuous_process((2, 8), event = 'continuous')
+        scr.add_event((5, 'early'), event = 'middle')
+        self.assertEqual(scr.all_generations_and_times(),
+            ['1 early', '2:4', '5 early', '6:8', '10 late'])
 #     # def test_errors(self):
 #     #     scr = slime.RecentHistory(final_gen = 5)
 #     #     self.assertRaises(ValueError, scr.add_event, (5, 'late', 'an-event'))

@@ -283,33 +283,50 @@ initialize(){
         else:
             return(len(self.script), 1)
 
-    def add_event(self, time, event, start=False):
-        # check whether an existing range of times must be broken up.
+    def add_event(self, time, event, start=False, check_continuous_processes = True):
+        # check whether there is already an event spanning a range of generations
+        # that covers the time of the new event. If so, this range must be broken up.
         generation = time[0]
-        for start, end in self.all_continuous_processes():
-            event_range = "%i:%i {" % (start, end)
-            existing_events = self.all_events_at_a_given_time(event_range[:-2])
-            regex = re.compile(event_range)
-            BREAK_TRIGGERED = 0
-            if generation == start:
-                if start + 1 < end:
-                    new_script = regex.sub("%i:%i {" % (start + 1, end), self.script)
-                else:
-                    new_script = regex.sub("%i early(){" % end, self.script)
-                BREAK_TRIGGERED = 1
-            elif start < generation and generation < end:
-                break
-            elif generation == end:
-                if start + 1 < end:
-                    new_script = regex.sub("%i:%i {" % (start, end - 1), self.script)
-                else:
-                    new_script = regex.sub("%i early(){" % start, self.script)
-                BREAK_TRIGGERED = 1
-            if BREAK_TRIGGERED:
-                self.script = new_script
-                for e in existing_events:
-                    self.add_event((time[0], time[1]), e)  
-                break              
+        if check_continuous_processes:
+            for start, end in self.all_continuous_processes():
+                event_range = "%i:%i {" % (start, end)
+                existing_events = self.all_events_at_a_given_time(event_range[:-2])
+                regex = re.compile(event_range)
+                BREAK_TRIGGERED = 0
+                if generation == start:
+                    if start + 1 < end:
+                        new_script = regex.sub("%i:%i {" % (start + 1, end), self.script)
+                    else:
+                        new_script = regex.sub("%i early(){" % end, self.script)
+                    self.script = new_script
+                    BREAK_TRIGGERED = 1
+                elif start < generation and generation < end:
+                    if generation + 1 == end:
+                        for e in existing_events:
+                            self.add_event((end, 'early'), e)
+                    else:
+                        for e in existing_events:
+                            self.add_continuous_process((generation + 1, end), e) 
+
+                    if start + 1 == generation:
+                        time_to_put_in = "%i early(){" % start
+                    else:
+                        time_to_put_in = "%i:%i {" % (start, generation - 1)
+                    new_script = regex.sub("%s" % time_to_put_in, self.script)
+                    self.script = new_script
+                    BREAK_TRIGGERED = 1           
+                elif generation == end:
+                    if start + 1 < end:
+                        new_script = regex.sub("%i:%i {" % (start, end - 1), self.script)
+                    else:
+                        new_script = regex.sub("%i early(){" % start, self.script)
+                    self.script = new_script
+                    BREAK_TRIGGERED = 1
+
+                if BREAK_TRIGGERED:
+                    for e in existing_events:
+                        self.add_event((time[0], time[1]), e, check_continuous_processes = False)  
+                    break              
 
         # Check for existing event at that time.
         if not self.time_already_in_script(time):
