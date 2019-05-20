@@ -137,6 +137,16 @@ class TestRecentHistoryGenerator(unittest.TestCase):
         scr.add_event((5, 'early'), event = 'middle')
         self.assertEqual(scr.all_generations_and_times(),
             ['1 early', '2:4', '5 early', '6:8', '10 late'])
+        scr = slime.RecentHistory(final_gen = 10)
+        scr.add_continuous_process((2, 8), event = 'continuous')
+        scr.add_event((3, 'early'), event = 'middle')
+        self.assertEqual(scr.all_generations_and_times(),
+            ['1 early', '2 early', '3 early', '4:8', '10 late'])
+        scr = slime.RecentHistory(final_gen = 10)
+        scr.add_continuous_process((2, 8), event = 'continuous')
+        scr.add_event((8, 'early'), event = 'middle')
+        self.assertEqual(scr.all_generations_and_times(),
+            ['1 early', '2:7', '8 early', '10 late'])
 #     # def test_errors(self):
 #     #     scr = slime.RecentHistory(final_gen = 5)
 #     #     self.assertRaises(ValueError, scr.add_event, (5, 'late', 'an-event'))
@@ -154,5 +164,11 @@ class TestDemographyConfig(unittest.TestCase):
         scr = slime.RecentHistory(final_gen = 5)
         config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
         scr.add_reference_population(config, 'ref0') 
-        scr.print_script()      
+        # scr.print_script()
+
+    def test_add_admixed_population(self):
+        scr = slime.RecentHistory(final_gen = 5)
+        config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
+        scr.add_admixed_population(config, 'adm') 
+        scr.print_script()        
 

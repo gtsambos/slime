@@ -457,6 +457,25 @@ initialize(){
             self.add_continuous_process((1,self.final_gen), 
                 event = "newSize = asInteger(p\"%i\".individualCount * %f" % (ind, growth_rate))
 
+    def add_admixed_population(self, popConfig, popLabel):
+        print('here')
+        if not isinstance(popConfig, msprime.PopulationConfiguration):
+            raise TypeError("popConfig must be a msprime.PopulationConfiguration object.")
+        sample_size = popConfig.sample_size
+        initial_size = popConfig.initial_size
+        growth_rate = np.exp(popConfig.growth_rate)
+        # if popConfig.growth_rate != 0:
+        #     return ValueError('At this stage, only the admixed population can have continuously changing population size.')
+        self.sample_sizes.append(sample_size)
+        self.initial_sizes.append(initial_size)
+        self.growth_rates.append(growth_rate)
+        self.population_labels.append(popLabel)
+        ind = len(self.population_labels) - 1
+        self.add_event((1, 'early'), "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
+        if growth_rate != 1:
+            self.add_continuous_process((2,self.final_gen), 
+                event = "newSize = asInteger(p%i.individualCount * %f" % (ind, growth_rate))
+
     def is_continuous(time):
         return(time.find(":"))
 
