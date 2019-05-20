@@ -142,17 +142,17 @@ class TestRecentHistoryGenerator(unittest.TestCase):
 #     #     self.assertRaises(ValueError, scr.add_event, (5, 'late', 'an-event'))
 
 
-# class TestDemographyConfig(unittest.TestCase):
+class TestDemographyConfig(unittest.TestCase):
 
-#     def test_demographic_input_type(self):
-#         scr = slime.RecentHistory(final_gen = 5)
-#         config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
-#         scr.add_reference_population(config, 'pop1')
-#         # scr.print_script()
+    def test_demographic_input_type(self):
+        scr = slime.RecentHistory(final_gen = 5)
+        config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
+        scr.add_reference_population(config, 'pop1')
+        # scr.print_script()
 
-#     def test_add_reference_population(self):
-#         scr = slime.RecentHistory(final_gen = 5)
-#         config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
-#         scr.add_reference_population(config, 'ref0') 
-#         # scr.print_script()      
+    def test_add_reference_population(self):
+        scr = slime.RecentHistory(final_gen = 5)
+        config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
+        scr.add_reference_population(config, 'ref0') 
+        scr.print_script()      
 
