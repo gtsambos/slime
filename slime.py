@@ -190,8 +190,10 @@ class AdmixtureSimulation(object):
 class RecentHistory(object):
     """Creates a SLiM script of recent history that the user
     can feed into SLiMe."""
-    def __init__(self, final_gen, outfile='recent-history.slim', model_type='WF'):
+    def __init__(self, final_gen, outfile='recent-history.trees', model_type='WF',
+        scriptfile = 'recent-history.slim'):
         self.outfile = outfile
+        self.scriptfile = scriptfile
         self.model_type = model_type
         self.script = """
 initialize(){
@@ -213,9 +215,24 @@ initialize(){
 
     def dump_script(self):
         return(self.script)
-    
+
+    def save_script(self, file = None):
+        if file is None:
+            file = self.scriptfile
+        slim_file = open(file, "w")
+        slim_file = writelines(slim_script)
+        slim_file.close()
+
     def print_script(self):
         print(self.script)
+
+    def run_slim(self, file = None, logFile = "recent-history.log"):
+        command_line = "slim" + " " + self.script + " " + "&> " + logFile
+        slim_run = os.system(command_line)
+        if slim_run != 0: # Print any errors.
+            log_file = open(logFile, "r")
+            for line in log_file:
+                print(line)
 
     def time_is_continuous(self, time):
         if len(time) == 2:

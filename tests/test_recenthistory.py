@@ -154,6 +154,10 @@ class TestRecentHistoryGenerator(unittest.TestCase):
 
 class TestDemographyConfig(unittest.TestCase):
 
+    def test_slim_run(self):
+        scr = slime.RecentHistory(final_gen = 5)        
+        scr.run_slim()
+
     def test_demographic_input_type(self):
         scr = slime.RecentHistory(final_gen = 5)
         config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
@@ -162,7 +166,7 @@ class TestDemographyConfig(unittest.TestCase):
 
     def test_add_reference_population(self):
         scr = slime.RecentHistory(final_gen = 5)
-        config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
+        config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
         scr.add_reference_population(config, 'ref0') 
         # scr.print_script()
 
