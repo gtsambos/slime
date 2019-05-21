@@ -535,8 +535,10 @@ initialize(){
         ind = len(self.population_labels) - 1
         self.add_event((1, 'early'), "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
         if growth_rate != 1:
-            self.add_continuous_process((1,self.final_gen), 
-                event = "newSize = asInteger(p\"%i\".individualCount * %f" % (ind, growth_rate))
+            # self.add_continuous_process((1,self.final_gen), 
+            #     event = "newSize = asInteger(p\"%i\".individualCount * %f" % (ind, growth_rate))
+            self.add_continuous_process((1, self.final_gen),
+                event = "p%i.setSubpopulationSize(asInteger(p%i.individualCount * %f))" % (ind, growth_rate))
 
     def add_admixed_population(self, popConfig, popLabel, proportions, single_pulse = True, migration_rate = None):
         if not isinstance(popConfig, msprime.PopulationConfiguration):
@@ -553,8 +555,10 @@ initialize(){
         ind = len(self.population_labels) - 1
         self.add_event((1, 'late'), "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
         if growth_rate != 1:
-            self.add_continuous_process((2,self.final_gen), 
-                event = "newSize = asInteger(p%i.individualCount * %f" % (ind, growth_rate))
+            # self.add_continuous_process((2,self.final_gen), 
+            #     event = "newSize = asInteger(p%i.individualCount * %f" % (ind, growth_rate))
+            self.add_continuous_process((2, self.final_gen),
+                event = "p%i.setSubpopulationSize(asInteger(p%i.individualCount * %f))" % (ind, ind, growth_rate))
         # Add admixture in.
         if not len(proportions) == len(self.population_labels) - 1:
             raise SystemError('A proportion must be allocated to each reference population.')
