@@ -183,7 +183,9 @@ class TestDemographyConfig(unittest.TestCase):
         # scr.print_script()
 
     def test_add_admixed_population(self):
-        scr = slime.RecentHistory(final_gen = 5, chrom_length = 10)
+        scr = slime.RecentHistory(final_gen = 5, chrom_length = 50000000)
+        rates = "examples/recomb_map_chromlength10.txt"
+        scr.initialize_recombination(rate = rates, constant = False)
         ref0_config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
         ref1_config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
         config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
@@ -191,6 +193,7 @@ class TestDemographyConfig(unittest.TestCase):
         scr.add_reference_population(ref1_config, 'ref1')
         scr.add_admixed_population(popConfig = config, popLabel = 'adm', proportions = [0.3,0.7], single_pulse = False, migration_rate = .02) 
         scr.print_script() 
+        scr.run_slim()
 
     def test_initialize_recombination(self):
         # constant recombination.
