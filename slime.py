@@ -190,8 +190,8 @@ class AdmixtureSimulation(object):
 class RecentHistory(object):
     """Creates a SLiM script of recent history that the user
     can feed into SLiMe."""
-    def __init__(self, final_gen, outfile='recent-history.trees', model_type='WF',
-        scriptfile = 'recent-history.slim'):
+    def __init__(self, final_gen, chrom_length,
+        outfile='recent-history.trees', model_type='WF', scriptfile = 'recent-history.slim'):
         self.outfile = outfile
         self.scriptfile = scriptfile
         self.model_type = model_type
@@ -212,6 +212,7 @@ initialize(){
         self.initial_sizes = []
         self.growth_rates = []
         self.population_labels = []
+        # Add inputted parameters to the script.
 
     def dump_script(self):
         return(self.script)
@@ -258,13 +259,18 @@ initialize(){
         else:
             pass
     
-    def find_event_index(self, time, INSERT_AT_START):
+    def find_event_index(self, time = None, start = False, 
+        initialization = False):
         """Finds the index of the script at which a new event should
         be inserted."""
-        gen_time = "%i %s(){" % (time[0], time[1])
+        if initialization:
+            gen_time = "initialize(){"
+        else:
+            assert time is not None
+            gen_time = "%i %s(){" % (time[0], time[1])
         gen_location = self.script.find("%s" % gen_time)
         start_loc = gen_location + len(gen_time)
-        if INSERT_AT_START:
+        if start:
             return(start_loc)
         else:
             rest_of_script = self.script[start_loc:]
@@ -299,6 +305,12 @@ initialize(){
             return(gen_location, BREAK_TRIGGERED)
         else:
             return(len(self.script), 1)
+
+    def initialize(self, event, start = False):
+        event_ind = self.find_event_index(start = start, initialization = True)
+        new_script = self.script[:event_ind] + """
+    %s""" % event + ";" + self.script[event_ind:]
+        self.script = new_script
 
     def add_event(self, time, event, start=False, check_continuous_processes = True):
         # check whether there is already an event spanning a range of generations

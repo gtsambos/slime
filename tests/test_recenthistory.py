@@ -19,9 +19,11 @@ class TestRecentHistoryGenerator(unittest.TestCase):
     # Tests the methods in the RecentHistory class.
     # """
 
-    def test_initialisation(self):
-        scr = slime.RecentHistory(final_gen = 5)
-        # scr.print_script()
+    def test_initialize(self):
+        scr = self.scr
+        scr.initialize('end of initialize')
+        scr.initialize('start of initialize', start = True) 
+        scr.print_script()
 
     def test_time_is_continuous(self):
         scr = self.scr
@@ -154,9 +156,9 @@ class TestRecentHistoryGenerator(unittest.TestCase):
 
 class TestDemographyConfig(unittest.TestCase):
 
-    def test_slim_run(self):
-        scr = slime.RecentHistory(final_gen = 5)        
-        scr.run_slim()
+    # def test_slim_run(self):
+    #     scr = slime.RecentHistory(final_gen = 5)        
+    #     scr.run_slim()
 
     def test_demographic_input_type(self):
         scr = slime.RecentHistory(final_gen = 5)
@@ -174,5 +176,5 @@ class TestDemographyConfig(unittest.TestCase):
         scr = slime.RecentHistory(final_gen = 5)
         config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
         scr.add_admixed_population(config, 'adm') 
-        scr.print_script()        
+        # scr.print_script()        
 
