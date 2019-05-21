@@ -9,7 +9,7 @@ class TestRecentHistory(unittest.TestCase):
     scr = slime.RecentHistory(final_gen = 5, chrom_length = 10)
     scr.add_event((1, 'early'), 'start of simulation')
     scr.add_event((3, 'late'), 'second event')
-    scr.add_event((3, 'late'), 'first event', start=True)
+    scr.add_event((3, 'late'), 'first event', insert_at_start=True)
     scr.add_event((3, 'late'), 'third event')
     scr.add_event((2, 'late'), 'the middle of the script')
     scr.add_event((5, 'late'), 'the end of the script')
@@ -156,6 +156,16 @@ class TestRecentHistory(unittest.TestCase):
 
 class TestDemographyConfig(unittest.TestCase):
 
+    # ref0_config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
+    # ref1_config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
+    # adm_config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
+    # scr = slime.RecentHistory(final_gen = 10, chrom_length = 10)
+    # scr.add_reference_population(ref0_config, 'ref0')
+    # scr.add_reference_population(ref1_config, 'ref1')
+    # scr.add_admixed_population(adm_config, 'adm', proportion,
+    #     single_pulse = True)
+
+
     # def test_slim_run(self):
     #     scr = slime.RecentHistory(final_gen = 5)        
     #     scr.run_slim()
@@ -174,8 +184,12 @@ class TestDemographyConfig(unittest.TestCase):
 
     def test_add_admixed_population(self):
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10)
+        ref0_config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
+        ref1_config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
         config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
-        scr.add_admixed_population(config, 'adm') 
+        scr.add_reference_population(ref0_config, 'ref0')
+        scr.add_reference_population(ref1_config, 'ref1')
+        scr.add_admixed_population(popConfig = config, popLabel = 'adm', proportions = [0.3,0.7]) 
         # scr.print_script() 
 
     def test_initialize_recombination(self):
@@ -184,7 +198,8 @@ class TestDemographyConfig(unittest.TestCase):
         rates = "examples/recomb_map_chromlength10.txt"
         scr.initialize_recombination(rate = rates, constant = False)
         scr.print_script()
-
-        # scr.initialize_recombination(0.2)
+        scr.initialize_recombination(0.2)
         # scr.print_script()     
 
+    # def test_add_single_pulse_admixture(self):
+    #     scr.

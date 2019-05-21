@@ -191,6 +191,8 @@ class RecentHistory(object):
     """Creates a SLiM script of recent history that the user
     can feed into SLiMe."""
     def __init__(self, final_gen, chrom_length,
+        reference_populations = None, admixed_population = None,
+        ref_labels = None, adm_label = None,
         outfile='recent-history.trees', model_type='WF', scriptfile = 'recent-history.slim'):
         self.outfile = outfile
         self.scriptfile = scriptfile
@@ -205,10 +207,21 @@ initialize(){
 }""" % self.model_type
         self.final_gen = final_gen
         self.chrom_length = chrom_length
+        self.reference_populations = reference_populations
+        # for each pop in self.reference_populations:
+        #     if not isinstance(pop, msprime.PopulationConfiguration):
+        #         raise TypeError('Reference populations must be a list of msprime.PopulationConfiguration objects.')
+        #     if len(self.reference_populations) < 2:
+        #         raise TypeError('There must be more than one reference population.')
+        # if ref_labels = None:
+        #     pass
+        # else:
+        #     assert len(ref_labels) == len(reference_populations)
+        #     self.ref_labels = ref_labels
         command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
         self.add_event((final_gen, "late"), command_to_save_out)
         self.add_event((final_gen, "late"), "sim.simulationFinished()")
-        self.number_of_reference_populations = 0
+        # self.number_of_reference_populations = len(self.reference_populations)
         self.sample_sizes = []
         self.initial_sizes = []
         self.growth_rates = []
@@ -217,7 +230,7 @@ initialize(){
         # Mutations - needed to initialize genomic element, even if rate is 0.
         self.initialize('initializeMutationRate(0)')
         self.initialize('initializeMutationType("m1", 0.5, "f", 0.0')
-        self.initialize('initializeGenomicElementType("g1", m1, 1.0);')
+        self.initialize('initializeGenomicElementType("g1", m1, 1.0)')
         self.initialize('initializeGenomicElement(g1, 0, %i)' % self.chrom_length)
 
     def dump_script(self):
@@ -267,6 +280,8 @@ initialize(){
     
     def find_event_index(self, time = None, start = False, 
         initialization = False):
+        # if time == (1, 'late'):
+        #     print('the time is 1 late')
         """Finds the index of the script at which a new event should
         be inserted."""
         if initialization:
@@ -277,10 +292,18 @@ initialize(){
         gen_location = self.script.find("%s" % gen_time)
         start_loc = gen_location + len(gen_time)
         if start:
+            if time == (1, 'late'):
+                print('the time is 1 late and I want the start')
             return(start_loc)
         else:
+            if time == (1, 'late'):
+                print('the time is 1 late and I want the end')
             rest_of_script = self.script[start_loc:]
             end_loc = rest_of_script.find('\n}')
+                # print('script 1')
+                # print(self.script)
+                # print('script 2')
+                # self.print_script()
             return(start_loc + end_loc)
                
     def find_time_index(self, time):
@@ -341,7 +364,7 @@ initialize(){
             self.initialize("initializeRecombinationRate(rates, ends)")
 
 
-    def add_event(self, time, event, start=False, check_continuous_processes = True):
+    def add_event(self, time, event, insert_at_start=False, check_continuous_processes = True):
         # check whether there is already an event spanning a range of generations
         # that covers the time of the new event. If so, this range must be broken up.
         generation = time[0]
@@ -398,7 +421,7 @@ initialize(){
 %i %s(){
 }""" % (time[0], time[1])
             self.script = new_script
-        event_ind = self.find_event_index((time[0], time[1]), start)
+        event_ind = self.find_event_index((time[0], time[1]), insert_at_start)
         new_script = self.script[:event_ind] + """
     %s""" % event + ";" + self.script[event_ind:]
         self.script = new_script
@@ -515,7 +538,7 @@ initialize(){
             self.add_continuous_process((1,self.final_gen), 
                 event = "newSize = asInteger(p\"%i\".individualCount * %f" % (ind, growth_rate))
 
-    def add_admixed_population(self, popConfig, popLabel):
+    def add_admixed_population(self, popConfig, popLabel, proportions, single_pulse = True):
         if not isinstance(popConfig, msprime.PopulationConfiguration):
             raise TypeError("popConfig must be a msprime.PopulationConfiguration object.")
         sample_size = popConfig.sample_size
@@ -528,10 +551,30 @@ initialize(){
         self.growth_rates.append(growth_rate)
         self.population_labels.append(popLabel)
         ind = len(self.population_labels) - 1
-        self.add_event((1, 'early'), "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
+        self.add_event((1, 'late'), "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
         if growth_rate != 1:
             self.add_continuous_process((2,self.final_gen), 
                 event = "newSize = asInteger(p%i.individualCount * %f" % (ind, growth_rate))
+        # Add admixture in.
+        if not len(proportions) == len(self.population_labels) - 1:
+            raise SystemError('A proportion must be allocated to each reference population.')
+        if np.sum(proportions) != 1:
+            raise ValueError('Admixture proportions must sum to 1.')
+        for p in proportions:
+            assert p >= 0
+            assert p <= 1
+        command_pops = "c("
+        for p in np.arange(0, len(self.population_labels) - 1):
+            command_pops += "p%i," % p
+        command_pops = command_pops[:-1]
+        command_pops += ")"
+        command_prop = "c("
+        for prop in proportions:
+            command_prop += "%f," % prop
+        command_prop = command_prop[:-1]
+        command_prop += ")"
+        command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, command_prop)
+        self.add_event((1, 'late'), "%s" % command)
 
     def is_continuous(time):
         return(time.find(":"))
