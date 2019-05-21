@@ -538,7 +538,7 @@ initialize(){
             self.add_continuous_process((1,self.final_gen), 
                 event = "newSize = asInteger(p\"%i\".individualCount * %f" % (ind, growth_rate))
 
-    def add_admixed_population(self, popConfig, popLabel, proportions, single_pulse = True):
+    def add_admixed_population(self, popConfig, popLabel, proportions, single_pulse = True, migration_rate = None):
         if not isinstance(popConfig, msprime.PopulationConfiguration):
             raise TypeError("popConfig must be a msprime.PopulationConfiguration object.")
         sample_size = popConfig.sample_size
@@ -575,6 +575,31 @@ initialize(){
         command_prop += ")"
         command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, command_prop)
         self.add_event((1, 'late'), "%s" % command)
+        if single_pulse:
+            final_zeros = "c("
+            for p in np.arange(0, len(self.population_labels) - 1):
+                final_zeros += "0.0,"
+            final_zeros = final_zeros[:-1]
+            final_zeros += ")"
+            end_command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, final_zeros)
+            self.add_event((2, 'late'), end_command)
+        else:
+            assert migration_rate >= 0
+            assert migration_rate <= 1
+            command_pops = "c("
+            for p in np.arange(0, len(self.population_labels)):
+                command_pops += "p%i," % p
+            command_pops = command_pops[:-1]
+            command_pops += ")"
+            command_prop = "c("
+            for prop in proportions:
+                command_prop += "%f," % (prop * migration_rate)
+            command_prop += "%f" % (1 - migration_rate)
+            command_prop += ")"
+            end_command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, command_prop)
+            self.add_event((2, 'late'), end_command)
+            
+
 
     def is_continuous(time):
         return(time.find(":"))
