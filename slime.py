@@ -446,7 +446,7 @@ initialize(){
         initial_size = popConfig.initial_size
         growth_rate = np.exp(popConfig.growth_rate)
         if popConfig.growth_rate != 0:
-            return ValueError('At this stage, only the admixed population can have continuously changing population size.')
+            raise ValueError('At this stage, only the admixed population can have continuously changing population size.')
         self.sample_sizes.append(sample_size)
         self.initial_sizes.append(initial_size)
         self.growth_rates.append(growth_rate)
@@ -458,7 +458,6 @@ initialize(){
                 event = "newSize = asInteger(p\"%i\".individualCount * %f" % (ind, growth_rate))
 
     def add_admixed_population(self, popConfig, popLabel):
-        print('here')
         if not isinstance(popConfig, msprime.PopulationConfiguration):
             raise TypeError("popConfig must be a msprime.PopulationConfiguration object.")
         sample_size = popConfig.sample_size
