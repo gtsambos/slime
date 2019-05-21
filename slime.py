@@ -204,6 +204,7 @@ initialize(){
 1 early(){      
 }""" % self.model_type
         self.final_gen = final_gen
+        self.chrom_length = chrom_length
         command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
         self.add_event((final_gen, "late"), command_to_save_out)
         self.add_event((final_gen, "late"), "sim.simulationFinished()")
@@ -213,6 +214,11 @@ initialize(){
         self.growth_rates = []
         self.population_labels = []
         # Add inputted parameters to the script.
+        # Mutations - needed to initialize genomic element, even if rate is 0.
+        self.initialize('initializeMutationRate(0)')
+        self.initialize('initializeMutationType("m1", 0.5, "f", 0.0')
+        self.initialize('initializeGenomicElementType("g1", m1, 1.0);')
+        self.initialize('initializeGenomicElement(g1, 0, %i)' % self.chrom_length)
 
     def dump_script(self):
         return(self.script)
@@ -311,6 +317,29 @@ initialize(){
         new_script = self.script[:event_ind] + """
     %s""" % event + ";" + self.script[event_ind:]
         self.script = new_script
+
+    def initialize_recombination(self, rate, constant = True):
+        if constant:
+            assert isinstance(rate, float)
+            assert rate >= 0
+            assert rate <= 1
+            self.initialize('initializeRecombinationRate(%f)' % rate)
+        else:
+            assert os.path.isfile(rate)
+            self.initialize("lines = readFile(%s)" % rate)
+            self.initialize("lines = lines[1:(size(lines)-1)]")
+            self.initialize("rates = NULL")
+            self.initialize("ends = NULL")
+            self.initialize("""for (line in lines)
+    {
+        components = strsplit(line, " ");
+        ends = c(ends, asInteger(components[1]));
+        rates = c(rates, asFloat(components[2]));
+    }
+    ends = ends - 1""")
+            self.initialize("rates = rates * 1e-8")
+            self.initialize("initializeRecombinationRate(rates, ends)")
+
 
     def add_event(self, time, event, start=False, check_continuous_processes = True):
         # check whether there is already an event spanning a range of generations
