@@ -205,5 +205,20 @@ class TestDemographyConfig(unittest.TestCase):
         scr.initialize_recombination(0.2)
         # scr.print_script()     
 
+    def test_add_demographic_events(self):
+        scr = slime.RecentHistory(final_gen = 10, chrom_length = 10)
+        config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
+        config1 = msprime.PopulationConfiguration(0, 100, growth_rate = 0.05)
+        scr.add_reference_population(config, 'pop0')
+        scr.add_reference_population(config, 'pop1')
+        scr.add_admixed_population(config1, 'adm', proportions = [0.2, 0.8])
+        change1 = msprime.PopulationParametersChange(3, growth_rate =  .5, population_id = 0)
+        change2 = msprime.PopulationParametersChange(6, growth_rate =  .6, population_id = 0)
+        change3 = msprime.PopulationParametersChange(2, growth_rate =  .3, population_id = 1)
+        change4 = msprime.PopulationParametersChange(8, growth_rate =  0, population_id = 1)
+        scr.add_demographic_events([change3, change1, change2, change4])
+        scr.print_script()
+
+
     # def test_add_single_pulse_admixture(self):
     #     scr.

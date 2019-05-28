@@ -217,6 +217,8 @@ initialize(){
         self.initial_sizes = []
         self.growth_rates = []
         self.population_labels = []
+        self.populations = [i for i in range(0,len(self.population_labels))]
+        self.initial_growth_rates = [0 for i in self.population_labels]
         # Mutations - needed to initialize genomic element, even if rate is 0.
         if mutations is None:
             self.mutations = MutationTypes(0, [0], [1.0])
@@ -285,7 +287,10 @@ initialize(){
             gen_time = "initialize(){"
         else:
             assert time is not None
-            gen_time = "%i %s(){" % (time[0], time[1])
+            if isinstance(time[1], str):
+                gen_time = "%i %s(){" % (time[0], time[1])
+            else:
+                gen_time = "%i:%i {" % (time[0], time[1])
         gen_location = self.script.find("%s" % gen_time)
         start_loc = gen_location + len(gen_time)
         if start:
@@ -413,7 +418,7 @@ initialize(){
     %s""" % event + ";" + self.script[event_ind:]
         self.script = new_script
 
-    def add_event_over_time_range(self, start, end, event):
+    def add_event_over_time_range(self, start, end, event, insert_at_start = False):
         time_ind, NOT_AT_END = self.find_time_index((start, 'early'))
         if not NOT_AT_END:
             raise ValueError("End generation is after the end of the simulation.")
@@ -421,7 +426,10 @@ initialize(){
         regex = re.compile("%i:%i {" % (start, end))
         ALREADY_IN_SCRIPT = regex.findall(self.script)
         if ALREADY_IN_SCRIPT:
-            pass
+            event_ind = self.find_event_index((start, end), insert_at_start)
+            new_script = self.script[:event_ind] + """
+    %s""" % event + ";" + self.script[event_ind:]
+            self.script = new_script
         else:
             new_script = self.script[:time_ind] + """%i:%i {
     %s;
@@ -500,12 +508,6 @@ initialize(){
         all_events_list = [i.strip() for i in all_events_list]
         all_events_list = [i for i in all_events_list if len(i) > 0]
         return(all_events_list)
-        
-#     # why isn't this working - check out later
-#     # def add_simulation_end(self, generation):
-#     #     command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
-#     #     self.add_event(generation, "late", command_to_save_out)
-#     #     self.add_event(generation, "late", "sim.simulationFinished()")
 
     def add_reference_population(self, popConfig, popLabel):
         if not isinstance(popConfig, msprime.PopulationConfiguration):
@@ -513,19 +515,22 @@ initialize(){
         sample_size = popConfig.sample_size
         initial_size = popConfig.initial_size
         growth_rate = np.exp(popConfig.growth_rate)
-        if popConfig.growth_rate != 0:
-            raise ValueError('At this stage, only the admixed population can have continuously changing population size.')
+        # if popConfig.growth_rate != 0:
+        #     raise ValueError('At this stage, only the admixed population can have continuously changing population size.')
         self.sample_sizes.append(sample_size)
         self.initial_sizes.append(initial_size)
         self.growth_rates.append(growth_rate)
         self.population_labels.append(popLabel)
         ind = len(self.population_labels) - 1
+        self.populations.append(ind)
         self.add_event((1, 'early'), "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
-        if growth_rate != 1:
+        # if growth_rate != 1:
+        ind = self.population_labels.index(popLabel)
+        self.initial_growth_rates.append(popConfig.growth_rate)
             # self.add_continuous_process((1,self.final_gen), 
             #     event = "newSize = asInteger(p\"%i\".individualCount * %f" % (ind, growth_rate))
-            self.add_continuous_process((1, self.final_gen),
-                event = "p%i.setSubpopulationSize(asInteger(p%i.individualCount * %f))" % (ind, growth_rate))
+            # self.add_continuous_process((1, self.final_gen),
+            #     event = "p%i.setSubpopulationSize(asInteger(p%i.individualCount * %f))" % (ind, growth_rate))
 
     def add_admixed_population(self, popConfig, popLabel, proportions, single_pulse = True, migration_rate = None):
         if not isinstance(popConfig, msprime.PopulationConfiguration):
@@ -533,17 +538,18 @@ initialize(){
         sample_size = popConfig.sample_size
         initial_size = popConfig.initial_size
         growth_rate = np.exp(popConfig.growth_rate)
-        # if popConfig.growth_rate != 0:
-        #     return ValueError('At this stage, only the admixed population can have continuously changing population size.')
         self.sample_sizes.append(sample_size)
         self.initial_sizes.append(initial_size)
         self.growth_rates.append(growth_rate)
         self.population_labels.append(popLabel)
         ind = len(self.population_labels) - 1
+        self.populations.append(ind)
         self.add_event((1, 'late'), "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
-        if growth_rate != 1:
-            self.add_continuous_process((2, self.final_gen),
-                event = "p%i.setSubpopulationSize(asInteger(p%i.individualCount * %f))" % (ind, ind, growth_rate))
+        # if growth_rate != 1:
+        ind = self.population_labels.index(popLabel)
+        self.initial_growth_rates.append(popConfig.growth_rate)
+            # self.add_continuous_process((2, self.final_gen),
+            #     event = "p%i.setSubpopulationSize(asInteger(p%i.individualCount * %f))" % (ind, ind, growth_rate))
         # Add admixture in.
         if not len(proportions) == len(self.population_labels) - 1:
             raise SystemError('A proportion must be allocated to each reference population.')
@@ -573,6 +579,95 @@ initialize(){
             command_prop = list_to_slim_vector(scaled_props)
             end_command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, command_prop)
             self.add_event((2, 'late'), end_command)
+
+    def add_demographic_events(self, event_list):
+        # Sort events by type.
+        param_changes = []
+        migr_rate_changes = []
+        mass_migrations = []
+        for e in event_list:
+            if isinstance(e, msprime.PopulationParametersChange):
+                param_changes.append(e)
+            elif isinstance(e, msprime.MigrationRateChange):
+                migr_rate_changes.append(e)
+            elif isinstance(e, msprime.MassMigration):
+                mass_migrations.append(e)
+
+        # for e in event_list:
+        #     if not isinstance(e, msprime.PopulationParametersChange) or isinstance(e, msprime.MigrationRateChange) or isinstance(e, msprime.MassMigration):
+        #         return TypeError('All events must be valid msprime demographic event objects.')
+        # First, process growth rate changes (the only recurring events).
+        # Do a first pass of the list to get times of the changes.
+        # The events must be ordered by time!!
+        growth_rates = self.initial_growth_rates
+        # print(growth_rates)
+        events_to_add = []
+        event_times = []
+        if any(self.initial_growth_rates) != 0:
+            event_times.append(2)
+        prev_time = 1
+        for e in param_changes:
+            if e.time < prev_time:
+                raise RuntimeError("At the moment, events must be ordered by forwards-time.")
+            if e.growth_rate is not None:
+                event_times.append(e.time)
+        event_times = list(set(event_times)) # Remove duplicate times.
+        event_times.sort()
+        # Initialize EventList objects.
+        for first, last in zip(event_times[:-1], event_times[1:]):
+            events_to_add.append(EventList(start_time = first, end_time = last))
+        events_to_add.append(EventList(start_time = last, end_time = self.final_gen))
+        events_to_add = iter(events_to_add)
+        current_event = events_to_add.__next__()
+        for e in param_changes:
+            current_time = e.time
+            if e.growth_rate is not None:
+                pop = e.population
+                growth_rates[pop] = e.growth_rate
+                # print(growth_rates)
+                # Once there are no more events in an epoch to be processed,
+                # add to the relevant event.
+                # Note. This assumes that event_list is ordered by time!!!
+            if prev_time != current_time:
+                # print('this happens')
+                while current_event.start_time < current_time:
+                    current_event = events_to_add.__next__()
+                for pop in self.populations:
+                    if growth_rates[pop] != 0:
+                        current_event.add_event("pop %i has growth rate %f" % (pop, growth_rates[pop]))
+                print(current_event.start_time, current_event.end_time, current_event.events)
+                # Add events into the script.
+                for e in current_event.events:
+                    if current_event.start_time + 1 == current_event.end_time:
+                        self.add_event((current_event.start_time, 'early'), e)
+                    else:
+                        self.add_event_over_time_range(current_event.start_time, current_event.end_time - 1, e)
+
+        # Next, add in all other standalone events
+
+
+class EventList(object):
+    """
+    Holds a start and and end time, and a list of events that happens
+    between those times.
+    """
+    def __init__(self, start_time, end_time = None):
+        self.start_time = start_time
+        if end_time is None:
+            self.end_time = self.start_time
+        else:
+            assert end_time > start_time
+            self.end_time = end_time
+        self.events = []
+
+    def __lt__(self, other):
+        return (self.start_time, self.end_time) < (other.start_time, other.end_time)
+
+    def add_event(self, event):
+        assert isinstance(event, str)
+        self.events.append(event)
+
+
 
 def list_to_slim_vector(list_of_strings):
     # Changes ['s1', 's2', 's3'] into 'c(s1,s2,s3)'
