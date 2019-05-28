@@ -193,6 +193,7 @@ class RecentHistory(object):
     def __init__(self, final_gen, chrom_length,
         reference_populations = None, admixed_population = None,
         ref_labels = None, adm_label = None,
+        mutations = None,
         outfile='recent-history.trees', model_type='WF', scriptfile = 'recent-history.slim'):
         self.outfile = outfile
         self.scriptfile = scriptfile
@@ -208,16 +209,6 @@ initialize(){
         self.final_gen = final_gen
         self.chrom_length = chrom_length
         self.reference_populations = reference_populations
-        # for each pop in self.reference_populations:
-        #     if not isinstance(pop, msprime.PopulationConfiguration):
-        #         raise TypeError('Reference populations must be a list of msprime.PopulationConfiguration objects.')
-        #     if len(self.reference_populations) < 2:
-        #         raise TypeError('There must be more than one reference population.')
-        # if ref_labels = None:
-        #     pass
-        # else:
-        #     assert len(ref_labels) == len(reference_populations)
-        #     self.ref_labels = ref_labels
         command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
         self.add_event((final_gen, "late"), command_to_save_out)
         self.add_event((final_gen, "late"), "sim.simulationFinished()")
@@ -226,11 +217,18 @@ initialize(){
         self.initial_sizes = []
         self.growth_rates = []
         self.population_labels = []
-        # Add inputted parameters to the script.
         # Mutations - needed to initialize genomic element, even if rate is 0.
-        self.initialize('initializeMutationRate(0)')
-        self.initialize('initializeMutationType("m1", 0.5, "f", 0.0')
-        self.initialize('initializeGenomicElementType("g1", m1, 1.0)')
+        if mutations is None:
+            self.mutations = MutationTypes(0, [0], [1.0])
+        else:
+            assert isinstance(mutations, MutationTypes)
+            self.mutations = mutations
+        MutationRate, MutationType, GenomicElementType = self.mutations.output()
+        self.initialize("initializeMutationRate(%s)" % MutationRate)
+        for m in MutationType:
+            self.initialize("initializeMutationType(%s)" % m)
+        self.initialize("initializeGenomicElementType(%s)" % GenomicElementType)
+        # For the moment, assume just one 'genomic element' g1 spanning the whole chromosome.
         self.initialize('initializeGenomicElement(g1, 0, %i)' % self.chrom_length)
 
     def dump_script(self):
@@ -253,6 +251,7 @@ initialize(){
             log_file = open(logFile, "r")
             for line in log_file:
                 print(line)
+            return(5) # error value
 
     def time_is_continuous(self, time):
         if len(time) == 2:
@@ -294,10 +293,6 @@ initialize(){
         else:
             rest_of_script = self.script[start_loc:]
             end_loc = rest_of_script.find('\n}')
-                # print('script 1')
-                # print(self.script)
-                # print('script 2')
-                # self.print_script()
             return(start_loc + end_loc)
                
     def find_time_index(self, time):
@@ -307,8 +302,6 @@ initialize(){
         times = self.all_generations_and_times()
         all_early_or_late_events = self.all_early_or_late_events()
 
-        # regex = re.compile(r"\d+ \bearly\b\(\)\{|\d+ \blate\b\(\)\{|\d+:\d+ \{")
-        # times = regex.findall(self.script)
         gen_regex =re.compile(r"\d+")
         if not self.time_is_continuous(time):
             time_regex=re.compile(r"\bearly\b|\blate\b")
@@ -584,22 +577,56 @@ initialize(){
         else:
             assert migration_rate >= 0
             assert migration_rate <= 1
-            command_pops = "c("
-            for p in np.arange(0, len(self.population_labels)):
-                command_pops += "p%i," % p
-            command_pops = command_pops[:-1]
-            command_pops += ")"
-            command_prop = "c("
-            for prop in proportions:
-                command_prop += "%f," % (prop * migration_rate)
-            command_prop += "%f" % (1 - migration_rate)
-            command_prop += ")"
+            pop_labels = ["p%i" % i for i in range(0, len(self.population_labels))]
+            command_pops = "c(" + ",".join(pop_labels) + ")"
+            # command_pops = "c("
+            # for p in np.arange(0, len(self.population_labels)):
+            #     command_pops += "p%i," % p
+            # command_pops = command_pops[:-1]
+            # command_pops += ")"
+            scaled_props = ["%f" % (p * migration_rate) for p in proportions]
+            command_prop = "c(" + ".".join(scaled_props) + ",%f" % (1 - migration_rate) + ")"
+            # command_prop = "c("
+            # for prop in proportions:
+            #     command_prop += "%f," % (prop * migration_rate)
+            # command_prop += "%f" % (1 - migration_rate)
+            # command_prop += ")"
             end_command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, command_prop)
             self.add_event((2, 'late'), end_command)
             
-
-
-    def is_continuous(time):
-        return(time.find(":"))
+class MutationTypes(object):
+    """
+    Holds information about mutations to put into the simulation.
+    """
+    def __init__(self, mutation_rate, selection_coeffs, proportions, dominance_coeffs = None):
+        self.mutation_rate = mutation_rate
+        self.selection_coeffs = selection_coeffs
+        assert len(proportions) == len(selection_coeffs)
+        assert np.sum(proportions) == 1
+        self.proportions = proportions
+        if dominance_coeffs is None:
+            self.dominance_coeffs = [0.5 for i in range(0, len(selection_coeffs))]
+        else:
+            self.dominance_coeffs = dominance_coeffs
+        
+    def output(self):
+        MutationRate = self.mutation_rate
+        MutationType = []
+        for m in range(0, len(self.selection_coeffs)):
+            type_to_add = "\"m%i\", %f, \"f\", %f" % (m, self.dominance_coeffs[m], self.selection_coeffs[m])
+            MutationType.append(type_to_add)
+        mut_labels = "c(" + ",".join(["m%i" % m for m in range(0, len(self.selection_coeffs))]) + ")"
+        proportions_str = [str(p) for p in self.proportions]
+        proportions = "c(" + ",".join(proportions_str) + ")"
+        GenomicElementType = "\"g1\", %s, %s" % (mut_labels, proportions)
+        return(MutationRate, MutationType, GenomicElementType)
+        
+    def print_output(self):
+        # Prints the commands to be inserted into the SLiM initialization.
+        MutationRate, MutationType, GenomicElementType = self.output()
+        print("initializeMutationRate(%s);" % MutationRate)
+        for m in MutationType:
+            print("initializeMutationType(%s);" % m)
+        print("initializeGenomicElementType(%s);" % GenomicElementType)
 
 

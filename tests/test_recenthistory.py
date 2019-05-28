@@ -156,6 +156,7 @@ class TestRecentHistory(unittest.TestCase):
 
 class TestDemographyConfig(unittest.TestCase):
 
+
     # ref0_config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
     # ref1_config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
     # adm_config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
@@ -193,7 +194,7 @@ class TestDemographyConfig(unittest.TestCase):
         scr.add_reference_population(ref1_config, 'ref1')
         scr.add_admixed_population(popConfig = config, popLabel = 'adm', proportions = [0.3,0.7], single_pulse = False, migration_rate = .02) 
         scr.print_script() 
-        scr.run_slim()
+        # scr.run_slim()
 
     def test_initialize_recombination(self):
         # constant recombination.
