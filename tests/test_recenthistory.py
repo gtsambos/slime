@@ -215,9 +215,14 @@ class TestDemographyConfig(unittest.TestCase):
         change1 = msprime.PopulationParametersChange(3, growth_rate =  .5, population_id = 0)
         change2 = msprime.PopulationParametersChange(6, growth_rate =  .6, population_id = 0)
         change3 = msprime.PopulationParametersChange(2, growth_rate =  .3, population_id = 1)
-        change4 = msprime.PopulationParametersChange(8, growth_rate =  0, population_id = 1)
+        change4 = msprime.PopulationParametersChange(8, growth_rate =  0, population_id = 1, initial_size = 100)
         scr.add_demographic_events([change3, change1, change2, change4])
         scr.print_script()
+
+    def test_delete_event(self):
+        scr = slime.RecentHistory(final_gen = 10, chrom_length = 10)
+        scr.delete_event("simulationFinished")
+        self.assertEqual(len(scr.all_events_at_a_given_time('10 late')), 1)
 
 
     # def test_add_single_pulse_admixture(self):

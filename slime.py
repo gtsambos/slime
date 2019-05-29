@@ -596,9 +596,14 @@ initialize(){
         # Add PopulationParametersChange events.
         self.add_population_parameters_change(param_changes)
 
-
-        # First, process growth rate changes (the only recurring events).
-        # The events must be ordered by time!!
+    def delete_event(self, string):
+        # Deletes all lines of the script containing the script in event.
+        event_loc = self.script.find("%s" % string)
+        script_start = self.script[:event_loc]
+        script_start = script_start[:script_start.rfind("\n")]
+        script_end = self.script[event_loc:]
+        script_end = script_end[script_end.find("\n"):]
+        self.script = script_start + script_end
 
     def add_population_parameters_change(self, paramChanges):
         """
@@ -651,8 +656,9 @@ initialize(){
                         self.add_event_over_time_range(current_event.start_time, current_event.end_time - 1, e)
 
             # 2. Process instantaneous population size changes. 
-            # if e.initial_size is not None:
-            #     self.add_event((current_time, 'early'))
+            if p.initial_size is not None:
+                command = "p%i.setSubpopulationSize(%i)" % (pop, p.initial_size)
+                self.add_event((current_time, 'early'), command)
         # Next, add in all other standalone events
 
 
