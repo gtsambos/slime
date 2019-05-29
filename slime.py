@@ -515,8 +515,6 @@ initialize(){
         sample_size = popConfig.sample_size
         initial_size = popConfig.initial_size
         growth_rate = np.exp(popConfig.growth_rate)
-        # if popConfig.growth_rate != 0:
-        #     raise ValueError('At this stage, only the admixed population can have continuously changing population size.')
         self.sample_sizes.append(sample_size)
         self.initial_sizes.append(initial_size)
         self.growth_rates.append(growth_rate)
@@ -592,15 +590,26 @@ initialize(){
                 migr_rate_changes.append(e)
             elif isinstance(e, msprime.MassMigration):
                 mass_migrations.append(e)
+            else:
+                raise TypeError("All items in the event_list must be a PopulationParametersChange, MigrationRateChange or MassMigration object.")
 
-        # for e in event_list:
-        #     if not isinstance(e, msprime.PopulationParametersChange) or isinstance(e, msprime.MigrationRateChange) or isinstance(e, msprime.MassMigration):
-        #         return TypeError('All events must be valid msprime demographic event objects.')
+        # Add PopulationParametersChange events.
+        self.add_population_parameters_change(param_changes)
+
+
         # First, process growth rate changes (the only recurring events).
-        # Do a first pass of the list to get times of the changes.
         # The events must be ordered by time!!
+
+    def add_population_parameters_change(self, paramChanges):
+        """
+        Takes a list of msprime.PopulationParametersChange objects
+        and 'translates' them into SLiM commands.
+        https://msprime.readthedocs.io/en/stable/api.html#demographic-events
+        There are two types of changes: exponential growth rate changes and
+        instantaneous population size changes.
+        """
+        param_changes = paramChanges
         growth_rates = self.initial_growth_rates
-        # print(growth_rates)
         events_to_add = []
         event_times = []
         if any(self.initial_growth_rates) != 0:
@@ -619,23 +628,21 @@ initialize(){
         events_to_add.append(EventList(start_time = last, end_time = self.final_gen))
         events_to_add = iter(events_to_add)
         current_event = events_to_add.__next__()
-        for e in param_changes:
-            current_time = e.time
-            if e.growth_rate is not None:
-                pop = e.population
-                growth_rates[pop] = e.growth_rate
-                # print(growth_rates)
-                # Once there are no more events in an epoch to be processed,
-                # add to the relevant event.
-                # Note. This assumes that event_list is ordered by time!!!
+        for p in param_changes:
+            current_time = p.time
+            # 1. Process growth rates.
+            pop = p.population
+            if p.growth_rate is not None:
+                growth_rates[pop] = p.growth_rate           
+            # Once there are no more events in an epoch to be processed,
+            # add to the relevant event.
+            # Note. This assumes that event_list is ordered by time!!!
             if prev_time != current_time:
-                # print('this happens')
                 while current_event.start_time < current_time:
                     current_event = events_to_add.__next__()
                 for pop in self.populations:
                     if growth_rates[pop] != 0:
-                        current_event.add_event("pop %i has growth rate %f" % (pop, growth_rates[pop]))
-                print(current_event.start_time, current_event.end_time, current_event.events)
+                        current_event.add_event("p%i.setSubpopulationSize(asInteger(p%i.individualCount * exp(%f)))" % (pop, pop, growth_rates[pop]))
                 # Add events into the script.
                 for e in current_event.events:
                     if current_event.start_time + 1 == current_event.end_time:
@@ -643,6 +650,9 @@ initialize(){
                     else:
                         self.add_event_over_time_range(current_event.start_time, current_event.end_time - 1, e)
 
+            # 2. Process instantaneous population size changes. 
+            # if e.initial_size is not None:
+            #     self.add_event((current_time, 'early'))
         # Next, add in all other standalone events
 
 
