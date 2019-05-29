@@ -596,14 +596,30 @@ initialize(){
         # Add PopulationParametersChange events.
         self.add_population_parameters_change(param_changes)
 
-    def delete_event(self, string):
-        # Deletes all lines of the script containing the script in event.
-        event_loc = self.script.find("%s" % string)
-        script_start = self.script[:event_loc]
-        script_start = script_start[:script_start.rfind("\n")]
-        script_end = self.script[event_loc:]
-        script_end = script_end[script_end.find("\n"):]
-        self.script = script_start + script_end
+    def delete_event(self, string, time = None):
+        # Deletes first line of the script containing the given string.
+        if time is None:
+            event_loc = self.script.find(string)
+            script_start = self.script[:event_loc]
+            script_start = script_start[:script_start.rfind("\n")]
+            script_end = self.script[event_loc:]
+            script_end = script_end[script_end.find("\n"):]
+            self.script = script_start + script_end
+        else:
+            time_str = time_as_string(time)
+            assert time_str in self.all_generations_and_times()
+            assert any(string in s for s in self.all_events_at_a_given_time(time_str))
+            time_loc = self.script.find(time_str + " {")
+            script_start = self.script[:time_loc]
+            script_end = self.script[time_loc:]
+            event_loc = script_end.find(string)
+            event_start = script_end[:event_loc]
+            event_start = event_start[:event_start.rfind("\n")]
+            event_end = script_end[event_loc:]
+            event_end = event_end[event_end.find("\n"):]
+            script_end = event_start + event_end
+            self.script = script_start + script_end
+
 
     def add_population_parameters_change(self, paramChanges):
         """
@@ -628,9 +644,13 @@ initialize(){
         event_times = list(set(event_times)) # Remove duplicate times.
         event_times.sort()
         # Initialize EventList objects.
-        for first, last in zip(event_times[:-1], event_times[1:]):
-            events_to_add.append(EventList(start_time = first, end_time = last))
-        events_to_add.append(EventList(start_time = last, end_time = self.final_gen))
+        if len(event_times) == 1:
+            events_to_add.append(EventList(start_time = event_times[0], 
+                end_time = self.final_gen))
+        else:
+            for first, last in zip(event_times[:-1], event_times[1:]):
+                events_to_add.append(EventList(start_time = first, end_time = last))
+            events_to_add.append(EventList(start_time = last, end_time = self.final_gen))
         events_to_add = iter(events_to_add)
         current_event = events_to_add.__next__()
         for p in param_changes:
@@ -661,6 +681,17 @@ initialize(){
                 self.add_event((current_time, 'early'), command)
         # Next, add in all other standalone events
 
+def time_as_string(time):
+    assert len(time) == 2
+    assert isinstance(time[0], (int, np.integer))
+    if isinstance(time[1], str):
+        assert time[1] == 'early' or time[1] == 'late'
+        gen_time = "%i %s" % (time[0], time[1])
+    else:
+        assert isinstance(time[1], (int, np.integer))
+        gen_time = "%i:%i" % (time[0], time[1])
+    return(gen_time)
+
 
 class EventList(object):
     """
@@ -672,7 +703,7 @@ class EventList(object):
         if end_time is None:
             self.end_time = self.start_time
         else:
-            assert end_time > start_time
+            assert end_time >= start_time
             self.end_time = end_time
         self.events = []
 
