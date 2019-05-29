@@ -609,7 +609,8 @@ initialize(){
             time_str = time_as_string(time)
             assert time_str in self.all_generations_and_times()
             assert any(string in s for s in self.all_events_at_a_given_time(time_str))
-            time_loc = self.script.find(time_str + " {")
+            time_loc = self.script.find(time_str)
+            print(time_loc, "time_loc")
             script_start = self.script[:time_loc]
             script_end = self.script[time_loc:]
             event_loc = script_end.find(string)
@@ -679,7 +680,12 @@ initialize(){
             if p.initial_size is not None:
                 command = "p%i.setSubpopulationSize(%i)" % (pop, p.initial_size)
                 self.add_event((current_time, 'early'), command)
-        # Next, add in all other standalone events
+                # If there is continuous growth at this time, remove it for this generation only.
+                popchange = "p%i.setSubpopulationSize(" % pop
+                events_at_time = self.all_events_at_a_given_time("%i early" % current_time)
+                no_of_popchanges = sum(popchange in e for e in events_at_time)
+                if no_of_popchanges > 1:
+                    self.delete_event(popchange, (current_time, 'early'))
 
 def time_as_string(time):
     assert len(time) == 2

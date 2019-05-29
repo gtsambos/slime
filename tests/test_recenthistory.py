@@ -217,7 +217,7 @@ class TestDemographyConfig(unittest.TestCase):
         change3 = msprime.PopulationParametersChange(2, growth_rate =  .3, population_id = 1)
         change4 = msprime.PopulationParametersChange(8, growth_rate =  0, population_id = 1, initial_size = 100)
         scr.add_demographic_events([change3, change1, change2, change4])
-        # scr.print_script()
+        scr.print_script()
 
     def test_delete_event(self):
         scr = slime.RecentHistory(final_gen = 10, chrom_length = 10)
