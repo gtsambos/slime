@@ -1,9 +1,10 @@
 import os
 import re
 import numpy as np
-import pandas as pd
+# import pandas as pd
 import msprime, pyslim
 import tskit # for now, this is my local version of tskit.
+import subprocess
 
 class SLiMError(Exception):
     """ Errors in the SLiM script that are likely to prevent the simulation 
@@ -12,17 +13,18 @@ class SLiMError(Exception):
     def __init__(self, message):
         self.message = message
 
-def simulate_recent_history(file, outFile = "recent-history.trees", logFile = "recent-history.log"):
+def simulate_recent_history(file):
     """
     Simulates genomic history from the start of admixture until
     the present day with SLiM.
     """
-    command_line = "slim" + " " + file + " " + "&> " + logFile
-    slim_run = os.system(command_line)
-    if slim_run != 0: # Print any errors.
-        log_file = open(logFile, "r")
-        for line in log_file:
-            print(line)
+    slim_run = subprocess.check_call(["slim", file])
+    # command_line = "slim" + " " + file + " " + "&> " + logFile
+    # slim_run = os.system(command_line)
+    # if slim_run != 0: # Print any errors.
+    #     log_file = open(logFile, "r")
+    #     for line in log_file:
+    #         print(line)
 
 # Functions for sampling from the tree sequence.
 class TreeSequenceToSample(object):
@@ -115,9 +117,12 @@ class AdmixtureSimulation(object):
 
     def go(self):
         """ A wrapper for the admixture simulation."""
-        print("HERE WE GO")
         print('Simulating recent history with SLiM...')
         self.simulate_recent_history()
+        print(self.slim_out)
+        if not os.path.isfile(self.slim_out):
+            raise StringError("The supplied SLiM outfile does not match the one specified\
+                in the script.")
         ts = tskit.load(self.slim_out)
         if self.need_to_subsample:
             print('Taking samples from present day populations...')
