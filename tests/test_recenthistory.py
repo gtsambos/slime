@@ -193,17 +193,14 @@ class TestDemographyConfig(unittest.TestCase):
         scr.add_reference_population(ref0_config, 'ref0')
         scr.add_reference_population(ref1_config, 'ref1')
         scr.add_admixed_population(popConfig = config, popLabel = 'adm', proportions = [0.3,0.7], single_pulse = False, migration_rate = .02) 
-        scr.print_script() 
-        # scr.run_slim()
+        # scr.print_script() 
 
     def test_initialize_recombination(self):
         # constant recombination.
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10)
         rates = "examples/recomb_map_chromlength10.txt"
         scr.initialize_recombination(rate = rates, constant = False)
-        # scr.print_script()
         scr.initialize_recombination(0.2)
-        # scr.print_script()     
 
     def test_add_demographic_events(self):
         scr = slime.RecentHistory(final_gen = 10, chrom_length = 10)
@@ -217,7 +214,7 @@ class TestDemographyConfig(unittest.TestCase):
         change3 = msprime.PopulationParametersChange(2, growth_rate =  .3, population_id = 1)
         change4 = msprime.PopulationParametersChange(8, growth_rate =  0, population_id = 1, initial_size = 100)
         scr.add_demographic_events([change3, change1, change2, change4])
-        scr.print_script()
+        # scr.print_script()
 
     def test_delete_event(self):
         scr = slime.RecentHistory(final_gen = 10, chrom_length = 10)
@@ -226,9 +223,7 @@ class TestDemographyConfig(unittest.TestCase):
         config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
         scr.add_reference_population(config, 'pop0')
         change1 = msprime.PopulationParametersChange(3, growth_rate =  .5, population_id = 0)
-        # scr.print_script()
         scr.add_demographic_events([change1])
-        # scr.print_script()
         scr.delete_event("p0.setSubpopulationSize", time = (3, 9))
         self.assertEqual(len(scr.all_events_at_a_given_time("3:9")), 0)
 
