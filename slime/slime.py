@@ -1,7 +1,7 @@
 import os
 import re
 import numpy as np
-# import pandas as pd
+import pandas as pd
 import msprime, pyslim
 import tskit # for now, this is my local version of tskit.
 import subprocess
@@ -103,7 +103,7 @@ class AdmixtureSimulation(object):
         self.slim_script = slim_script
         self.slim_out = slim_out
         self.out_file = out_file
-        self.slim_out = None
+        self.slim_out = slim_out
         self.populations = populations_to_sample_from
         self.sample_sizes = sample_sizes
         if self.populations is not None:
@@ -117,9 +117,9 @@ class AdmixtureSimulation(object):
 
     def go(self):
         """ A wrapper for the admixture simulation."""
+        print(self.slim_out)
         print('Simulating recent history with SLiM...')
         self.simulate_recent_history()
-        print(self.slim_out)
         if not os.path.isfile(self.slim_out):
             raise StringError("The supplied SLiM outfile does not match the one specified\
                 in the script.")
@@ -146,18 +146,20 @@ class AdmixtureSimulation(object):
             ts.dump(self.out_file)
         return(ts)
 
-    def simulate_recent_history(self, logFile = "recent-history.log"):
+    def simulate_recent_history(self):
         """
         Simulates genomic history from the start of admixture until
         the present day with SLiM.
         """
         file = self.slim_script
-        command_line = "slim" + " " + file + " " + "&> " + logFile
-        slim_run = os.system(command_line)
-        if slim_run != 0: # Print any errors.
-            log_file = open(logFile, "r")
-            for line in log_file:
-                print(line)
+        slim_run = subprocess.check_call(["slim", file])
+        # file = self.slim_script
+        # command_line = "slim" + " " + file + " " + "&> " + logFile
+        # slim_run = os.system(command_line)
+        # if slim_run != 0: # Print any errors.
+        #     log_file = open(logFile, "r")
+        #     for line in log_file:
+        #         print(line)
 
     def debugger(self):
         """ A debugger to run before the simulation. """

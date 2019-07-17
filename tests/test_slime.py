@@ -85,10 +85,6 @@ initialize() {
             # YRI
             msprime.PopulationConfiguration(                                
                 initial_size = N0,                                
-                growth_rate = 0),
-            # ASW - needed as a 'dummy'
-            msprime.PopulationConfiguration(
-                sample_size = 0,                                                              
                 growth_rate = 0)
         ]
 
@@ -102,11 +98,13 @@ initialize() {
                 rate = 0)
         ]
 
-        mysim = slime.AdmixtureSimulation("ex_script.slim", slim_out="ex_slim.trees",
-                    populations_to_sample_from = [2], sample_sizes = [100],
+        mysim = slime.AdmixtureSimulation(slim_script="ex_script.slim", 
+                    slim_out="examples/ex-recent-history.trees",
                     neutral_mutation_rate = mu, ancient_recombination_rate = rho,
                     ancient_population_configurations = population_configurations,
-                    ancient_demographic_events = demographic_events, 
-                    out_file = "ex_out.trees")
+                    ancient_demographic_events = demographic_events,
+                    out_file = "ex_out.trees",
+                    populations_to_sample_from = [2], sample_sizes = [10], 
+                    )
         ts = mysim.go()
 
