@@ -5,105 +5,6 @@ import pandas as pd
 import msprime, pyslim
 import tskit # for now, this is my local version of tskit.
 
-# class AdmixtureSimulation(object):
-#     def __init__(
-#         self, slim_script, 
-#         ancient_recombination_rate,
-#         ancient_population_configurations,
-#         ancient_demographic_events,
-#         neutral_mutation_rate = 0,
-#         out_file = None, 
-#         populations_to_sample_from= None,
-#         sample_sizes = None,
-#         ):
-#         self.slim_script = slim_script
-#         self.out_file = out_file
-#         self.slim_out = None
-#         self.populations = populations_to_sample_from
-#         self.sample_sizes = sample_sizes
-#         if self.populations is not None:
-#             self.need_to_subsample = 1
-#         else:
-#             self.need_to_subsample = 0
-#         self.ancient_recombination_rate = ancient_recombination_rate
-#         self.ancient_population_configurations = ancient_population_configurations
-#         self.ancient_demographic_events = ancient_demographic_events
-#         self.neutral_mutation_rate = neutral_mutation_rate
-
-#     def go(self):
-#         """ A wrapper for the admixture simulation."""
-#         print('Simulating recent history with SLiM...')
-#         simulate_recent_history(self.slim_script)
-#         ts = tskit.load(self.slim_out)
-#         if self.need_to_subsample:
-#             print('Taking samples from present day populations...')
-#             ts = TreeSequenceToSample(ts, 
-#                 populations_to_sample_from = self.populations,
-#                 sample_sizes = self.sample_sizes)
-#             ts = ts.subsample()
-#         # tabs = ts.tables
-#         ts = pyslim.SlimTreeSequence.load_tables(ts.tables)
-#         print('Simulating ancient history with msprime...')
-#         ts = ts.recapitate(
-#             recombination_rate = self.ancient_recombination_rate,
-#             population_configurations = self.ancient_population_configurations,
-#             demographic_events = self.ancient_demographic_events,
-#             keep_first_generation = True # needed to get local ancestors
-#             )
-#         print('Adding variation...')
-#         ts = pyslim.SlimTreeSequence(msprime.mutate(ts, 
-#             rate=self.neutral_mutation_rate, keep=True))
-#         if self.out_file is not None:
-#             ts.dump(self.out_file)
-#         return(ts)
-
-#     def debugger(self):
-#         """ A debugger to run before the simulation. """
-#         # SLiM debugging
-#         slim = self.slim_script
-#         print('\nSLiM input file:', slim)
-#         # Test 1: is an output file saved?
-#         with open(slim ,'r') as f:
-#             lines = f.readlines()
-#             string_pre = ".treeSeqOutput("
-#             string_post = ")"
-#             ind = 0
-#             for line in lines:
-#                 if string_pre in line and string_post in line:
-#                     out_file = line.split(string_pre)[1].split(string_post)[0]
-#                     self.slim_out = out_file.strip('""')
-#                     print('SLiM output file:', self.slim_out)
-#                     ind = 1
-#             if ind == 0:
-#                 print(
-#     """SLiM error:
-#     Oh no, your script does not produce a .trees file!
-#     Please ensure you include a call to 'treeSeqOutput()' at the end of your script.
-#                     """)
-#         # Test 2: subsampling
-#         if self.populations is not None or self.sample_sizes is not None:
-#             if len(self.populations) != len(self.sample_sizes):
-#                 print(
-#     """ Subsampling error:
-#     The list of populations to sample from must have the same length
-#     as the list of sample sizes."""
-#     )
-#             print("We are sampling:")
-#             for ind in range(len(self.populations)):
-#                 print("-", self.sample_sizes[ind], "individuals from population", 
-#                     self.populations[ind])
-#         else:
-#             "No subsampling will be performed."
-#         # Test 3: demography debugging in recapitation
-#         print('Ancient demography:')
-#         dd = msprime.DemographyDebugger(
-#             population_configurations=self.ancient_population_configurations,
-#             demographic_events=self.ancient_demographic_events)
-#         dd.print_history()
-#         # Test 4: Adding variation
-#         # Neutral mutations
-#         print('Neutral mutation rate:', self.neutral_mutation_rate)
-
 class RecentHistory(object):
     """Creates a SLiM script of recent history that the user
     can feed into SLiMe."""
@@ -158,7 +59,7 @@ initialize(){
         if file is None:
             file = self.scriptfile
         slim_file = open(file, "w")
-        slim_file.writelines(file)
+        slim_file.writelines(self.script)
         slim_file.close()
 
     def print_script(self):
@@ -259,7 +160,7 @@ initialize(){
             self.initialize('initializeRecombinationRate(%f)' % rate)
         else:
             assert os.path.isfile(rate)
-            self.initialize("lines = readFile(%s)" % rate)
+            self.initialize("lines = readFile('%s')" % rate)
             self.initialize("lines = lines[1:(size(lines)-1)]")
             self.initialize("rates = NULL")
             self.initialize("ends = NULL")

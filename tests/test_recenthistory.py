@@ -156,21 +156,6 @@ class TestRecentHistory(unittest.TestCase):
 
 class TestDemographyConfig(unittest.TestCase):
 
-
-    # ref0_config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
-    # ref1_config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
-    # adm_config = msprime.PopulationConfiguration(0, 100, growth_rate = .04)
-    # scr = slime.RecentHistory(final_gen = 10, chrom_length = 10)
-    # scr.add_reference_population(ref0_config, 'ref0')
-    # scr.add_reference_population(ref1_config, 'ref1')
-    # scr.add_admixed_population(adm_config, 'adm', proportion,
-    #     single_pulse = True)
-
-
-    # def test_slim_run(self):
-    #     scr = slime.RecentHistory(final_gen = 5)        
-    #     scr.run_slim()
-
     def test_demographic_input_type(self):
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10)
         config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)

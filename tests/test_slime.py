@@ -64,10 +64,25 @@ initialize() {
     slim_file.writelines(slim_script)
     slim_file.close()
 
+    scr = slime.RecentHistory(final_gen = 10, chrom_length = 10)
+    scr.initialize_recombination(0.2)
+    config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
+    config1 = msprime.PopulationConfiguration(0, 100, growth_rate = 0.05)
+    scr.add_reference_population(config, 'pop0')
+    scr.add_reference_population(config, 'pop1')
+    scr.add_admixed_population(config1, 'adm', proportions = [0.2, 0.8])
+    change1 = msprime.PopulationParametersChange(3, growth_rate =  .5, population_id = 0)
+    change2 = msprime.PopulationParametersChange(6, growth_rate =  .6, population_id = 0)
+    change3 = msprime.PopulationParametersChange(2, growth_rate =  .3, population_id = 1)
+    change4 = msprime.PopulationParametersChange(8, growth_rate =  0, population_id = 1, initial_size = 100)
+    scr.add_demographic_events([change3, change1, change2, change4])
+    scr.save_script("ex_script2.slim")
+
     def test_simulate_recent_history(self):
         slime.simulate_recent_history("ex_script.slim")
+        slime.simulate_recent_history("ex_script2.slim")
 
-    def test_slime_run(self):
+    def test_slime_run_saved_script(self):
         rho = 1e-8
         mu = 1e-8
         ######################
@@ -98,13 +113,26 @@ initialize() {
                 rate = 0)
         ]
 
+        # First, with the created script.
         mysim = slime.AdmixtureSimulation(slim_script="ex_script.slim", 
                     slim_out="examples/ex-recent-history.trees",
                     neutral_mutation_rate = mu, ancient_recombination_rate = rho,
                     ancient_population_configurations = population_configurations,
                     ancient_demographic_events = demographic_events,
-                    out_file = "ex_out.trees",
+                    out_file = "examples/ex_out.trees",
                     populations_to_sample_from = [2], sample_sizes = [10], 
                     )
         ts = mysim.go()
+
+        # Next, with the generated script.
+        mysim2 = slime.AdmixtureSimulation(slim_script="ex_script2.slim", 
+            slim_out="examples/ex-recent-history.trees",
+            neutral_mutation_rate = mu, ancient_recombination_rate = rho,
+            ancient_population_configurations = population_configurations,
+            ancient_demographic_events = demographic_events,
+            out_file = "examples/ex_out.trees",
+            populations_to_sample_from = [2], sample_sizes = [10], 
+            )
+        ts2 = mysim2.go()
+
 
