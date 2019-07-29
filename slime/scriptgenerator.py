@@ -4,19 +4,30 @@ import numpy as np
 import pandas as pd
 import msprime, pyslim
 import tskit # for now, this is my local version of tskit.
+import subprocess
 
 class RecentHistory(object):
     """Creates a SLiM script of recent history that the user
     can feed into SLiMe."""
-    def __init__(self, final_gen, chrom_length,
-        reference_populations = None, admixed_population = None,
-        ref_labels = None, adm_label = None,
-        mutations = None,
-        outfile='recent-history.trees', model_type='WF', 
-        scriptfile = 'recent-history.slim'):
+    def __init__(self, final_gen, chrom_length, reference_configs, adm_configs, prop,
+        recombination=0, ref_labels=None, adm_label=None, reference_populations=None,
+        admixed_population=None, mutations=None, outfile='recent-history.trees',
+        model_type='WF', scriptfile='recent-history.slim'):
         self.outfile = outfile
         self.scriptfile = scriptfile
         self.model_type = model_type
+        self.final_gen = int(final_gen)
+        assert final_gen > 0
+        self.chrom_length = chrom_length
+        assert chrom_length > 0
+        self.sample_sizes = []
+        self.initial_sizes = []
+        self.growth_rates = []
+        self.population_labels = []
+        self.populations = [i for i in range(0,len(self.population_labels))]
+        self.initial_growth_rates = [0 for i in self.population_labels]
+
+        # Initialize the script.
         self.script = """
 initialize(){
     initializeSLiMModelType("%s");
@@ -25,20 +36,36 @@ initialize(){
 
 1 early(){      
 }""" % self.model_type
-        self.final_gen = final_gen
-        self.chrom_length = chrom_length
         self.reference_populations = reference_populations
         command_to_save_out = "sim.treeSeqOutput(\"%s\")" % self.outfile
         self.add_event((final_gen, "late"), command_to_save_out)
         self.add_event((final_gen, "late"), "sim.simulationFinished()")
-        # self.number_of_reference_populations = len(self.reference_populations)
-        self.sample_sizes = []
-        self.initial_sizes = []
-        self.growth_rates = []
-        self.population_labels = []
-        self.populations = [i for i in range(0,len(self.population_labels))]
-        self.initial_growth_rates = [0 for i in self.population_labels]
-        # Mutations - needed to initialize genomic element, even if rate is 0.
+
+        # Add population information into the script.
+        if ref_labels is None:
+            self.ref_labels = ['pop_ref%i' % i for i in range(0, len(reference_configs))]
+        else:
+            assert len(ref_labels) == len(reference_configs)
+            self.ref_labels = ref_labels
+        assert len(reference_configs) > 1
+        for pop, label in zip(reference_configs, self.ref_labels):
+            assert isinstance(pop, msprime.PopulationConfiguration)
+            self.add_reference_population(pop, label)
+
+        if adm_label is None:
+            self.adm_label = 'pop_adm'
+        else:
+            assert len(adm_label) == 1
+            self.adm_label = adm_label
+        for p in prop: assert p >=0 and p <= 1
+        assert sum(prop) == 1
+        assert len(reference_configs) == len(prop)
+        assert isinstance(adm_configs, msprime.PopulationConfiguration)
+        self.add_admixed_population(adm_configs, adm_label, proportions=prop)
+
+        # Add mutations.
+        # We need to initialize a genomic element with a mutation type,
+        # even if the mutation rate is 0.
         if mutations is None:
             self.mutations = MutationTypes(0, [0], [1.0])
         else:
@@ -51,6 +78,35 @@ initialize(){
         self.initialize("initializeGenomicElementType(%s)" % GenomicElementType)
         # For the moment, assume just one 'genomic element' g1 spanning the whole chromosome.
         self.initialize('initializeGenomicElement(g1, 0, %i)' % self.chrom_length)
+
+        # Add recombination.
+        rate = recombination
+        if isinstance(rate, (int, float)):
+            assert isinstance(recombination, (float, int))
+            assert rate >= 0
+            assert rate <= 1
+            self.initialize('initializeRecombinationRate(%f)' % rate)
+        else:
+            assert os.path.isfile(rate)
+            self.initialize("lines = readFile('%s')" % rate)
+            self.initialize("lines = lines[1:(size(lines)-1)]")
+            self.initialize("rates = NULL")
+            self.initialize("ends = NULL")
+            self.initialize("""for (line in lines)
+    {
+        components = strsplit(line, " ");
+        ends = c(ends, asInteger(components[1]));
+        rates = c(rates, asFloat(components[2]));
+    }
+    ends = ends - 1""")
+            self.initialize("rates = rates * 1e-8")
+            self.initialize("initializeRecombinationRate(rates, ends)")       
+
+    def initialize(self, event, start = False):
+        event_ind = self.find_event_index(start = start, initialization = True)
+        new_script = self.script[:event_ind] + """
+    %s""" % event + ";" + self.script[event_ind:]
+        self.script = new_script
 
     def dump_script(self):
         return(self.script)
@@ -65,14 +121,12 @@ initialize(){
     def print_script(self):
         print(self.script)
 
-    def run_slim(self, file = None, logFile = "recent-history.log"):
-        command_line = "slim" + " " + self.script + " " + "&> " + logFile
-        slim_run = os.system(command_line)
-        if slim_run != 0: # Print any errors.
-            log_file = open(logFile, "r")
-            for line in log_file:
-                print(line)
-            return(5) # error value
+    def run_slim(self, verbose=True):
+        self.save_script(file=self.scriptfile)
+        if verbose:
+            subprocess.check_call(["slim", "-l", self.scriptfile])
+        else:
+            subprocess.check_output(["slim", self.scriptfile])
 
     def time_is_continuous(self, time):
         if len(time) == 2:
@@ -145,35 +199,6 @@ initialize(){
             return(gen_location, BREAK_TRIGGERED)
         else:
             return(len(self.script), 1)
-
-    def initialize(self, event, start = False):
-        event_ind = self.find_event_index(start = start, initialization = True)
-        new_script = self.script[:event_ind] + """
-    %s""" % event + ";" + self.script[event_ind:]
-        self.script = new_script
-
-    def initialize_recombination(self, rate, constant = True):
-        if constant:
-            assert isinstance(rate, float)
-            assert rate >= 0
-            assert rate <= 1
-            self.initialize('initializeRecombinationRate(%f)' % rate)
-        else:
-            assert os.path.isfile(rate)
-            self.initialize("lines = readFile('%s')" % rate)
-            self.initialize("lines = lines[1:(size(lines)-1)]")
-            self.initialize("rates = NULL")
-            self.initialize("ends = NULL")
-            self.initialize("""for (line in lines)
-    {
-        components = strsplit(line, " ");
-        ends = c(ends, asInteger(components[1]));
-        rates = c(rates, asFloat(components[2]));
-    }
-    ends = ends - 1""")
-            self.initialize("rates = rates * 1e-8")
-            self.initialize("initializeRecombinationRate(rates, ends)")
-
 
     def add_event(self, time, event, insert_at_start=False, check_continuous_processes = True):
         # check whether there is already an event spanning a range of generations
