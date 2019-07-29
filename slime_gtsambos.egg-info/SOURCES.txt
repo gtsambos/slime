@@ -1,6 +1,0 @@
-README.md
-setup.py
-slime_gtsambos.egg-info/PKG-INFO
-slime_gtsambos.egg-info/SOURCES.txt
-slime_gtsambos.egg-info/dependency_links.txt
-slime_gtsambos.egg-info/top_level.txt
