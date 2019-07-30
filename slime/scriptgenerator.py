@@ -281,36 +281,50 @@ initialize(){
 """ % (start, end, event) + "\n" + self.script[time_ind:]
             self.script = new_script 
 
-    def add_continuous_process(self, time, event):
+    def add_continuous_process(self, time, event, early=True):
         """
         Adds an event to each generation in the specified range.
+        If there's already a one-off event at a generation within the specified range,
+        the event will also be added as a one-off event in that generation. (By default,
+        this will happen at the 'early' time period - but this behaviour can be controlled
+        by the `early` parameter.).
         """
         start = time[0]
         end = time[1]
         missing_gens = []
         gen_range = [i for i in np.arange(start, end + 1)]
         for gen in gen_range:
-            if self.time_already_in_script((gen, 'early')):
-                self.add_event((gen, 'early'), event)
-            elif self.time_already_in_script((gen, 'late')):
-                self.add_event((gen, 'late'), event, gen == self.final_gen)
+            if self.time_already_in_script((gen, 'early')) or self.time_already_in_script((gen, 'late')):
+                if early:
+                    self.add_event((gen, 'early'), event)
+                else:
+                    self.add_event((gen, 'late'), event)
             else:
                 missing_gens.append(gen)
+
         # Process the remaining generations. See helpful answer at
         # https://stackoverflow.com/questions/2154249/identify-groups-of-continuous-numbers-in-a-list
-        def gen_groups():
-            first = last = missing_gens[0]
-            for gen in missing_gens[1:]:
-                if gen == last + 1:
-                    last = gen
-                else:
-                    yield first, last
-                    first = last = gen
-            yield first, last
-        missing_ranges = list(gen_groups())
-        for start, end in missing_ranges:
-            time = (start, end)
-            self.add_event_over_time_range(time[0], time[1], event)
+        if len(missing_gens) == 1:
+            gen = missing_gens[0]
+            if early:
+                self.add_event((gen, 'early'), event)
+            else:
+                self.add_event((gen, 'late'), event)
+
+        else:
+            def gen_groups():
+                first = last = missing_gens[0]
+                for gen in missing_gens[1:]:
+                    if gen == last + 1:
+                        last = gen
+                    else:
+                        yield first, last
+                        first = last = gen
+                yield first, last
+            missing_ranges = list(gen_groups())
+            for start, end in missing_ranges:
+                time = (start, end)
+                self.add_event_over_time_range(time[0], time[1], event)
 
     def gen_in_range(self, gen, start, end):
         return(start <= gen and gen <= end)
@@ -558,8 +572,6 @@ class EventList(object):
     def add_event(self, event):
         assert isinstance(event, str)
         self.events.append(event)
-
-
 
 def list_to_slim_vector(list_of_strings):
     # Changes ['s1', 's2', 's3'] into 'c(s1,s2,s3)'

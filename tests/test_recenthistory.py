@@ -49,26 +49,6 @@ class TestRecentHistory(unittest.TestCase):
         generations = [int(gen) for gen in generations]
         self.assertEqual(generations, sorted(generations))
 
-    # def test_time_order(self):
-    #     scr = self.scr.dump_script()
-    #     self.scr.print_script()
-    #     gen_regex = re.compile("^\d+", flags=re.MULTILINE)
-    #     event_regex = re.compile(r"\d+ \bearly\b|\d+ \blate\b")
-    #     generations = gen_regex.findall(scr)
-    #     generations = [int(gen) for gen in generations]
-    #     events = event_regex.findall(scr)
-    #     for gen in generations:
-    #         early_str = "%i early" % gen
-    #         late_str = "%i late" % gen
-    #         early_regex = re.compile(early_str)
-    #         late_regex = re.compile(late_str)
-    #         early = early_regex.findall(scr)
-    #         late = late_regex.findall(scr)
-    #         self.assertLess(len(early), 2)
-    #         self.assertLess(len(late), 2)
-    #         if len(early) == 1 and len(late) == 1:
-    #             self.assertEqual(events.index(early) + 1, events.index(late))
-
     def test_ordering_inside_events(self):
         scr = self.scr.dump_script()
         event = '3 late(){'
@@ -132,7 +112,6 @@ class TestRecentHistory(unittest.TestCase):
             ['first event', 'second event', 'third event'])
 
     def test_break_up_range(self):
-        # scr = slime.RecentHistory(final_gen=5, chrom_length = 10)
         config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
@@ -142,20 +121,25 @@ class TestRecentHistory(unittest.TestCase):
         events = scr.all_generations_and_times()
         # scr.print_script()
         self.assertEqual(events, ['1 early', '1 late', '2 early', '2 late', '3:4', '5 late'])
+
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
         scr.add_continuous_process((2, 3), event = 'growth')
         scr.add_event((2, 'early'), event = 'event')
-        # self.assertEqual(scr.all_generations_and_times(), ### This one fails
-            # ['1 early', '1 late', '2 early', '2 late', '3 early', '5 late'])
+        # scr.print_script()
+        self.assertEqual(scr.all_generations_and_times(),
+            ['1 early', '1 late', '2 early', '2 late', '3 early', '5 late'])
+
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
         scr.add_continuous_process((2, 4), event = 'growth')
         scr.add_event((4, 'early'), event = 'event')
+        # scr.print_script()
         self.assertEqual(scr.all_generations_and_times(),
-            ['1 early', '1 late', '2 late', '3 early', '4 early', '5 late'])
+            ['1 early', '1 late', '2 early', '2 late', '3 early', '4 early', '5 late'])
+
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
@@ -163,32 +147,36 @@ class TestRecentHistory(unittest.TestCase):
         scr.add_event((4, 'early'), event = 'event')
         self.assertEqual(scr.all_generations_and_times(),
             ['1 early', '1 late', '2 late', '3 early', '4 early', '5 late'])
+
         scr = slime.RecentHistory(final_gen = 10, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
         scr.add_continuous_process((2, 8), event = 'continuous')
         scr.add_event((5, 'early'), event = 'middle')
+        # scr.print_script()
         self.assertEqual(scr.all_generations_and_times(),
-            ['1 early', '1 late', '2 late', '3:4', '5 early', '6:8', '10 late'])
+            ['1 early', '1 late', '2 early', '2 late', '3:4', '5 early', '6:8', '10 late'])
+
         scr = slime.RecentHistory(final_gen = 10, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
         scr.add_continuous_process((2, 8), event = 'continuous')
         scr.add_event((3, 'early'), event = 'middle')
         self.assertEqual(scr.all_generations_and_times(),
-            ['1 early', '1 late', '2 late', '3 early', '4:8', '10 late'])
+            ['1 early', '1 late', '2 early', '2 late', '3 early', '4:8', '10 late'])
+
         scr = slime.RecentHistory(final_gen = 10, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
         scr.add_continuous_process((2, 8), event = 'continuous')
         scr.add_event((8, 'early'), event = 'middle')
         self.assertEqual(scr.all_generations_and_times(),
-            ['1 early', '1 late', '2 late', '3:7', '8 early', '10 late'])
+            ['1 early', '1 late', '2 early', '2 late', '3:7', '8 early', '10 late'])
 
 
 class TestDemographyConfig(unittest.TestCase):
 
-    def test_demographic_input_type(self):
+    def test_basic_input(self):
         config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
