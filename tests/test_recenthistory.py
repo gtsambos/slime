@@ -1,8 +1,10 @@
 
 import slime
-import msprime
+import msprime, tskit
 import unittest
 import re
+import random
+import numpy as np
 
 class TestRecentHistory(unittest.TestCase):
 
@@ -218,5 +220,73 @@ class TestDemographyConfig(unittest.TestCase):
         scr.run_slim(verbose=False)
 
 
-    # def test_add_single_pulse_admixture(self):
-    #     scr.
+class TestExamplesInDocs(unittest.TestCase):
+    """
+    Holds examples of RecentHistory shown in the documentation.
+    """
+
+    def test_quickstart(self):
+        ref0_config = msprime.PopulationConfiguration(sample_size=0, initial_size=10, growth_rate=0)
+        ref1_config = msprime.PopulationConfiguration(sample_size=0, initial_size=15, growth_rate=0)
+        adm_config = msprime.PopulationConfiguration(sample_size=5, initial_size=10, growth_rate = 0)
+        adm_props = [0.3, 0.7]
+        rho = 0.1
+        length = 10
+        gens = 15
+        script = slime.RecentHistory(final_gen=gens, chrom_length=length,
+            reference_configs=[ref0_config, ref1_config], adm_configs=adm_config,
+            prop=adm_props)
+        script.run_slim(verbose=False)
+        # Check output.
+        ts = tskit.load("recent-history.trees")
+        self.assertEqual(len(ts.samples(0)), 10*2)
+        self.assertEqual(len(ts.samples(1)), 15*2)
+        self.assertEqual(len(ts.samples(2)), 10*2)
+        root0 = ts.first().roots[0]
+        self.assertEqual(ts.first().time(root0), 15)
+
+
+class TestDemography(unittest.TestCase):
+    """
+    Runs SLiM on randomly-generated scripts under various models of demography.
+    """
+
+    def test_many_populations(self):
+        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10, growth_rate=0)
+        num_pops = random.randint(5, 15)
+        ref_configs = [config for i in range(0, num_pops)]
+        props = np.zeros(num_pops)
+         # Ensure rounding error doesn't cause an error.
+         # This is giving me quite a bit of grief!!
+        while sum(props) != 1 or any(props) == 0:
+            props = np.random.dirichlet([1 for i in range(0, num_pops)])
+            props = np.round(props, decimals=2)
+            props[-1] = np.round(1 - sum(props[:-1]), decimals=2)
+        # props = np.round(props, decimals=2)
+        assert sum(props) == 1
+        script = slime.RecentHistory(final_gen=20, chrom_length=10,
+            reference_configs=ref_configs, adm_configs=config,
+            prop=props)
+        # script.print_script()
+        script.run_slim(verbose=False)
+        # Check output
+        ts = tskit.load("recent-history.trees")
+        for pop in range(0, num_pops + 1):
+            self.assertEqual(len(ts.samples(pop)), 10*2)
+        root0 = ts.first().roots[0]
+        self.assertEqual(ts.first().time(root0), 20)
+
+    # def test_constantly_growing_populations(self):
+    #     ref_configs = []
+    #     for pop in range(0,3):
+    #         ref_configs.append(msprime.PopulationConfiguration(0, initial_size=10, 
+    #             growth_rate=random.randint(1,10)/100))
+    #     adm_config = msprime.PopulationConfiguration(0, initial_size=10,
+    #         growth_rate = random.randint(1,10)/100)
+    #     script = slime.RecentHistory(final_gen=20, chrom_length=10,
+    #         reference_configs=ref_configs, adm_configs=adm_config,
+    #         prop=[0.2,0.3,0.5])
+    #     script.print_script()
+    #     script.run_slim(verbose=False)
+
+
