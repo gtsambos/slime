@@ -5,6 +5,7 @@ import pandas as pd
 import msprime, pyslim
 import tskit # for now, this is my local version of tskit.
 import subprocess
+import itertools
 
 class RecentHistory(object):
     """Creates a SLiM script of recent history that the user
@@ -147,10 +148,10 @@ initialize(){
         
     def time_already_in_script(self, time):
         if not self.time_is_continuous(time):
-            gen_time = "%i %s()" % (time[0], time[1])
+            gen_time = "\n%i %s()" % (time[0], time[1])
             return(gen_time in self.script)
         else:
-            pass
+            pass # FILL THIS OUT
     
     def find_event_index(self, time = None, start = False, 
         initialization = False):
@@ -161,9 +162,9 @@ initialize(){
         else:
             assert time is not None
             if isinstance(time[1], str):
-                gen_time = "%i %s(){" % (time[0], time[1])
+                gen_time = "\n%i %s(){" % (time[0], time[1])
             else:
-                gen_time = "%i:%i {" % (time[0], time[1])
+                gen_time = "\n%i:%i {" % (time[0], time[1])
         gen_location = self.script.find("%s" % gen_time)
         start_loc = gen_location + len(gen_time)
         if start:
@@ -291,8 +292,9 @@ initialize(){
         """
         start = time[0]
         end = time[1]
-        missing_gens = []
+        remaining_gens = []
         gen_range = [i for i in np.arange(start, end + 1)]
+        # Process single events that are already in the script.
         for gen in gen_range:
             if self.time_already_in_script((gen, 'early')) or self.time_already_in_script((gen, 'late')):
                 if early:
@@ -300,21 +302,24 @@ initialize(){
                 else:
                     self.add_event((gen, 'late'), event)
             else:
-                missing_gens.append(gen)
+                remaining_gens.append(gen)
+
+        # Process existing continuous time spans.
+        # remaining = []
+        # for gen in remaining_gens:
 
         # Process the remaining generations. See helpful answer at
         # https://stackoverflow.com/questions/2154249/identify-groups-of-continuous-numbers-in-a-list
-        if len(missing_gens) == 1:
-            gen = missing_gens[0]
+        if len(remaining_gens) == 1:
+            gen = remaining_gens[0]
             if early:
                 self.add_event((gen, 'early'), event)
             else:
                 self.add_event((gen, 'late'), event)
-
         else:
             def gen_groups():
-                first = last = missing_gens[0]
-                for gen in missing_gens[1:]:
+                first = last = remaining_gens[0]
+                for gen in remaining_gens[1:]:
                     if gen == last + 1:
                         last = gen
                     else:
@@ -322,6 +327,7 @@ initialize(){
                         first = last = gen
                 yield first, last
             missing_ranges = list(gen_groups())
+            # print('missing_ranges:', missing_ranges)
             for start, end in missing_ranges:
                 time = (start, end)
                 self.add_event_over_time_range(time[0], time[1], event)
@@ -367,12 +373,20 @@ initialize(){
         all_events_list = [i for i in all_events_list if len(i) > 0]
         return(all_events_list)
 
+    def delete_time(self, time):
+        time_0 = "\n%s" % time
+        start_ind = self.script.find(time_0)
+        script_shortened = self.script[start_ind:]
+        end_ind = script_shortened.find('}\n')
+        new_script = self.script[:start_ind] + script_shortened[end_ind+2:]
+        self.script = new_script
+
     def add_reference_population(self, popConfig, popLabel):
         if not isinstance(popConfig, msprime.PopulationConfiguration):
             TypeError("popConfig must be a msprime.PopulationConfiguration object.")
         sample_size = popConfig.sample_size
         initial_size = popConfig.initial_size
-        growth_rate = np.exp(popConfig.growth_rate)
+        growth_rate = popConfig.growth_rate
         self.sample_sizes.append(sample_size)
         self.initial_sizes.append(initial_size)
         self.growth_rates.append(growth_rate)
@@ -380,7 +394,6 @@ initialize(){
         ind = len(self.population_labels) - 1
         self.populations.append(ind)
         self.add_event((1, 'early'), "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
-        # if growth_rate != 1:
         ind = self.population_labels.index(popLabel)
         self.initial_growth_rates.append(popConfig.growth_rate)
 
@@ -451,6 +464,7 @@ initialize(){
 
     def delete_event(self, string, time = None):
         # Deletes first line of the script containing the given string.
+        # Use with caution...
         if time is None:
             event_loc = self.script.find(string)
             script_start = self.script[:event_loc]
