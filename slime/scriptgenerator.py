@@ -201,66 +201,85 @@ initialize(){
         else:
             return(len(self.script), 1)
 
-    def add_event(self, time, event, insert_at_start=False, check_continuous_processes = True):
-        # check whether there is already an event spanning a range of generations
-        # that covers the time of the new event. If so, this range must be broken up.
-        generation = time[0]
-        if check_continuous_processes:
-            for start, end in self.all_continuous_processes():
-                event_range = "%i:%i {" % (start, end)
-                existing_events = self.all_events_at_a_given_time(event_range[:-2])
-                regex = re.compile(event_range)
-                BREAK_TRIGGERED = 0
-                if generation == start:
-                    if start + 1 < end:
-                        new_script = regex.sub("%i:%i {" % (start + 1, end), self.script)
-                    else:
-                        new_script = regex.sub("%i early(){" % end, self.script)
-                    self.script = new_script
-                    BREAK_TRIGGERED = 1
-                elif start < generation and generation < end:
-                    if generation + 1 == end:
-                        for e in existing_events:
-                            self.add_event((end, 'early'), e)
-                    else:
-                        for e in existing_events:
-                            self.add_continuous_process((generation + 1, end), e) 
+    def add_event(self, time, event, insert_at_start=False, check_continuous_processes = True,
+        early=True):
 
-                    if start + 1 == generation:
-                        time_to_put_in = "%i early(){" % start
-                    else:
-                        time_to_put_in = "%i:%i {" % (start, generation - 1)
-                    new_script = regex.sub("%s" % time_to_put_in, self.script)
-                    self.script = new_script
-                    BREAK_TRIGGERED = 1           
-                elif generation == end:
-                    if start + 1 < end:
-                        new_script = regex.sub("%i:%i {" % (start, end - 1), self.script)
-                    else:
-                        new_script = regex.sub("%i early(){" % start, self.script)
-                    self.script = new_script
-                    BREAK_TRIGGERED = 1
+        # Loop through existing times.
+        if early:
+            early_or_late = 'early'
+        else:
+            early_or_late = 'late'
+        input_list = self.all_generations_and_times(return_as_strings=False)
+        EVENT_ADDED = False
 
-                if BREAK_TRIGGERED:
+        for ind in range(0, len(input_list)):
+            t = input_list[ind]
+
+            # If there is an existing event at this time.
+            if t == time:
+                self.add_event_to_single_time(time, event, insert_at_start)
+                EVENT_ADDED = True
+                
+            # If there is a continuous range spanning this time.
+            elif isinstance(t[1], int) and t[0] <= time[0] and time[0] <= t[1]:
+
+                # Remove existing range.
+                existing_events = self.all_events_at_a_given_time(time = "%i:%i" % (t[0], t[1]))
+                self.delete_time(time="%i:%i " % (t[0], t[1]))
+
+                if t[0] == time[0] - 1:
+                    time_to_add = (t[0], early_or_late)
+                    self.add_new_single_time(time=time_to_add)
                     for e in existing_events:
-                        self.add_event((time[0], time[1]), e, check_continuous_processes = False)  
-                    break              
+                        self.add_event_to_single_time(time_to_add, e, insert_at_start)
+                elif t[0] < time[0] - 1:
+                    for e in existing_events:
+                        self.add_event_over_time_range(t[0], time[0] - 1, e)
+                            
+                # print(time)
+                self.add_new_single_time((time[0], early_or_late))
+                if time[1] == 'late':
+                    self.add_new_single_time(time)
+                for e in existing_events:
+                    self.add_event_to_single_time((time[0], early_or_late), e, insert_at_start)
+                self.add_event_to_single_time(time, event, insert_at_start)
+                            
+                if t[1] == time[0] + 1:
+                    time_to_add = (t[1], early_or_late)
+                    self.add_new_single_time(time=time_to_add)
+                    for e in existing_events:
+                        self.add_event_to_single_time(time_to_add, e, insert_at_start)
+                        
+                elif t[1] > time[0] + 1:
+                    for e in existing_events:
+                        self.add_event_over_time_range(time[0]+1, t[1], e)
 
-        # Check for existing event at that time.
-        if not self.time_already_in_script(time):
-            time_ind, NOT_AT_END = self.find_time_index(time)
-            if NOT_AT_END:
-                new_script = self.script[:time_ind] + """%i %s(){
-}
-""" % (time[0], time[1]) + "\n" + self.script[time_ind:]
-            else:
-                new_script = self.script + "\n" + """
-%i %s(){
-}""" % (time[0], time[1])
-            self.script = new_script
+                EVENT_ADDED = True
+
+        # If there's no existing event at this time, add one.
+        if not EVENT_ADDED:
+            self.add_new_single_time(time)
+            self.add_event_to_single_time(time, event, insert_at_start)
+
+    def add_event_to_single_time(self, time, event, insert_at_start):
         event_ind = self.find_event_index((time[0], time[1]), insert_at_start)
         new_script = self.script[:event_ind] + """
     %s""" % event + ";" + self.script[event_ind:]
+        self.script = new_script        
+
+    def add_new_single_time(self, time):
+        """
+        Creates a new code block for the supplied single time.
+        """
+        time_ind, NOT_AT_END = self.find_time_index(time)
+        if NOT_AT_END:
+            new_script = self.script[:time_ind] + """%i %s(){
+}
+""" % (time[0], time[1]) + "\n" + self.script[time_ind:]
+        else:
+            new_script = self.script + "\n" + """
+%i %s(){
+}""" % (time[0], time[1])
         self.script = new_script
 
     def add_event_over_time_range(self, start, end, event, insert_at_start = False):
@@ -283,6 +302,10 @@ initialize(){
             self.script = new_script 
 
     def add_continuous_process(self, new_range, event, early=True):
+        """
+        Adds an event that occurs over an interval of generations.
+        Breaks up existing events if necessary.
+        """
         input_list = self.all_generations_and_times(return_as_strings=False)
         if early:
             early_or_late = 'early'
@@ -314,7 +337,9 @@ initialize(){
                         for e in existing_events:
                             self.add_event(time=(time[0], early_or_late), event=e)
                         new_times.append(time[0])
-                    elif time[0] < new_range[0] + 1:
+                    elif time[0] < new_range[0] - 1:
+                        for e in existing_events:
+                            self.add_event_over_time_range(time[0], new_range[0] - 1, e)
                         for t in range(time[0], new_range[0]):
                             new_times.append(t)
 
@@ -432,6 +457,10 @@ initialize(){
         ind = len(self.population_labels) - 1
         self.populations.append(ind)
         self.add_event((1, 'early'), "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
+        # msprime.PopulationParametersChange(3, growth_rate =  .5, population_id = 0)
+        if growth_rate != 0:
+            self.add_continuous_process((2, self.final_gen),
+                event = "p%i.setSubpopulationSize(asInteger(p%i.individualCount * exp(%f)))" % (ind, ind, growth_rate))
         ind = self.population_labels.index(popLabel)
         self.initial_growth_rates.append(popConfig.growth_rate)
 
@@ -440,7 +469,7 @@ initialize(){
             raise TypeError("popConfig must be a msprime.PopulationConfiguration object.")
         sample_size = popConfig.sample_size
         initial_size = popConfig.initial_size
-        growth_rate = np.exp(popConfig.growth_rate)
+        growth_rate = popConfig.growth_rate
         self.sample_sizes.append(sample_size)
         self.initial_sizes.append(initial_size)
         self.growth_rates.append(growth_rate)
@@ -448,6 +477,10 @@ initialize(){
         ind = len(self.population_labels) - 1
         self.populations.append(ind)
         self.add_event((1, 'late'), "sim.addSubpop(\"p%i\", %i)" % (ind, initial_size))
+        # ind = self.population_labels.index(popLabel)
+        if growth_rate != 0:
+            self.add_continuous_process((2, self.final_gen),
+                event = "p%i.setSubpopulationSize(asInteger(p%i.individualCount * exp(%f)))" % (ind, ind, growth_rate))
         ind = self.population_labels.index(popLabel)
         self.initial_growth_rates.append(popConfig.growth_rate)
             # self.add_continuous_process((2, self.final_gen),
