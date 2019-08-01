@@ -337,6 +337,17 @@ class TestExamplesInDocs(unittest.TestCase):
         root0 = ts.first().roots[0]
         self.assertEqual(ts.first().time(root0), 15)
 
+    def test_recenthistory_defaults(self):
+        ref_pops = [msprime.PopulationConfiguration(sample_size=10, initial_size=100),
+               msprime.PopulationConfiguration(sample_size=10, initial_size=100)]
+        adm_pop = msprime.PopulationConfiguration(sample_size=20, initial_size=50)
+        adm_prop = [0.3, 0.7]
+        gens = 20 # 100
+        script = slime.RecentHistory(final_gen=gens, chrom_length=10,
+                recombination=1e-1, reference_configs=ref_pops, adm_configs=adm_pop,
+                prop=adm_prop)
+        script.run_slim(verbose=False)
+        script.print_script()
 
 class TestDemography(unittest.TestCase):
     """
@@ -375,17 +386,12 @@ class TestDemography(unittest.TestCase):
                 growth_rate=random.randint(1,10)/100))
         adm_config = msprime.PopulationConfiguration(0, initial_size=10,
             growth_rate = random.randint(1,10)/100)
-        print(ref_configs)
         script = slime.RecentHistory(final_gen=17, chrom_length=10,
             reference_configs=ref_configs, adm_configs=adm_config,
             prop=[0.2,0.3,0.5])
-        script.print_script()
-        # script.run_slim(verbose=False)
-        # config0 = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
-        # config1 = msprime.PopulationConfiguration(0, 10, growth_rate = 0.1)
-        # scr = slime.RecentHistory(final_gen = 10, chrom_length = 10,
-        #     reference_configs = [config1, config1, config1], adm_configs = config0,
-        #     prop = [0.5, 0.4, 0.1])
-        # scr.print_script()
+        self.assertEqual(script.all_generations_and_times(),
+            ['1 early', '1 late', '2 early', '2 late', '3:16', '17 early', '17 late'])
+        # script.print_script()
+        script.run_slim(verbose=False)
 
 

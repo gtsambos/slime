@@ -8,11 +8,20 @@ Welcome to slime's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents 1:
+   introduction
+   recenthistory
+
+Introduction
+============
+Under the hood, each ``slime`` simulation consists of 3 components:
+
+#. A forward-in-time simulation of admixture using SLiM. (:ref:`sec_recenthistory`)
+#. A backwards-in-time simulation of ancestral population history using msprime
+#. Extraction of local ancestry from the resulting tree sequence
 
 
-
-Indices and tables
+Table of contents
 ==================
 
 * :ref:`genindex`
@@ -20,11 +29,16 @@ Indices and tables
 * :ref:`search`
 
 
-
 Installation
 ============
 
+Step 1. Simulation of admixture
+===============================
+You must have a SLiM script describing the recent history of admixture.
+In slime, we provide a script generator that allows you to generate these scripts for
+a flexible range of situations in Python.
 
+:ref:`sec_recenthistory`
 
 Quickstart - a simple example
 =============================
