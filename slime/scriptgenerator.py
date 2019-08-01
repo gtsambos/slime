@@ -282,62 +282,100 @@ initialize(){
 """ % (start, end, event) + "\n" + self.script[time_ind:]
             self.script = new_script 
 
-    def add_continuous_process(self, time, event, early=True):
-        """
-        Adds an event to each generation in the specified range.
-        If there's already a one-off event at a generation within the specified range,
-        the event will also be added as a one-off event in that generation. (By default,
-        this will happen at the 'early' time period - but this behaviour can be controlled
-        by the `early` parameter.).
-        """
-        start = time[0]
-        end = time[1]
-        remaining_gens = []
-        gen_range = [i for i in np.arange(start, end + 1)]
-        # Process single events that are already in the script.
-        for gen in gen_range:
-            if self.time_already_in_script((gen, 'early')) or self.time_already_in_script((gen, 'late')):
-                if early:
-                    self.add_event((gen, 'early'), event)
-                else:
-                    self.add_event((gen, 'late'), event)
-            else:
-                remaining_gens.append(gen)
-
-        # Process existing continuous time spans.
-        # remaining = []
-        # for gen in remaining_gens:
-
-        # Process the remaining generations. See helpful answer at
-        # https://stackoverflow.com/questions/2154249/identify-groups-of-continuous-numbers-in-a-list
-        if len(remaining_gens) == 1:
-            gen = remaining_gens[0]
-            if early:
-                self.add_event((gen, 'early'), event)
-            else:
-                self.add_event((gen, 'late'), event)
+    def add_continuous_process(self, new_range, event, early=True):
+        input_list = self.all_generations_and_times(return_as_strings=False)
+        if early:
+            early_or_late = 'early'
         else:
-            def gen_groups():
-                first = last = remaining_gens[0]
-                for gen in remaining_gens[1:]:
-                    if gen == last + 1:
-                        last = gen
+            early_or_late = 'late'
+        new_times = []
+        # Loop through times, and print each 'new thing' to be done.
+        for ind in range(0, len(input_list)):
+            time = input_list[ind]
+            
+            # Single event ranges
+            if isinstance(time[1], str):
+                # If there is both an early and late event in this generation,
+                # add the event only once.
+                if time[0] == input_list[ind - 1][0]:
+                    pass
+                elif new_range[0] <= time[0] and time[0] <= new_range[1]:
+                    self.add_event(time=(time[0], early_or_late), event=event)
+                    new_times.append(time[0])
+                    
+            # Continuous event ranges
+            else:
+                if time[1] >= new_range[0] and new_range[1] >= time[0]:
+
+                    existing_events = self.all_events_at_a_given_time(time = "%i:%i" % (time[0], time[1]))
+                    self.delete_time(time="%i:%i " % (time[0], time[1]))
+
+                    if time[0] == new_range[0] - 1:
+                        for e in existing_events:
+                            self.add_event(time=(time[0], early_or_late), event=e)
+                        new_times.append(time[0])
+                    elif time[0] < new_range[0] + 1:
+                        for t in range(time[0], new_range[0]):
+                            new_times.append(t)
+
+                    if max(time[0], new_range[0]) == min(time[1], new_range[1]):
+                        t = (max(time[0], new_range[0]), early_or_late)
+                        for e in existing_events:
+                            self.add_event(time=t, event=e)
                     else:
-                        yield first, last
-                        first = last = gen
-                yield first, last
-            missing_ranges = list(gen_groups())
-            # print('missing_ranges:', missing_ranges)
-            for start, end in missing_ranges:
-                time = (start, end)
-                self.add_event_over_time_range(time[0], time[1], event)
+                        t = (max(time[0], new_range[0]), min(time[1], new_range[1]))
+                        for e in existing_events:
+                            self.add_event_over_time_range(t[0], t[1], event=e)
+                        self.add_event_over_time_range(t[0], t[1], event=event)
+
+                        for t in range(max(time[0], new_range[0]), min(time[1], new_range[1]) + 1):
+                            new_times.append(t)
+                    
+                    if time[1] == new_range[1] + 1:
+                        for e in existing_events:
+                            self.add_event(time=(time[1], early_or_late), event=e)
+                        new_times.append(time[1])
+                        
+                    elif time[1] > new_range[1] + 1:
+                        for e in existing_events:
+                            self.add_event_over_time_range(new_range[1] + 1, time[1], event=e)
+                        for t in range(new_range[1] + 1, time[1] + 1):
+                            new_times.append(t)
+                            
+        remaining_times =  set([i for i in range(new_range[0], new_range[1]+1)]) - set(new_times)
+        remaining_times = list(remaining_times)
+        
+        def ranges(i):
+            for a, b in itertools.groupby(enumerate(i), lambda args: args[1] - args[0]):
+                b = list(b)
+                yield b[0][1], b[-1][1]
+                
+        for r in ranges(remaining_times):
+            # single events
+            if r[0] == r[1]:
+                self.add_event(time=(r[0], early_or_late), event=event)
+            else:
+                self.add_event_over_time_range(r[0], r[1], event)
 
     def gen_in_range(self, gen, start, end):
         return(start <= gen and gen <= end)
 
-    def all_generations_and_times(self):
-        regex = re.compile(r"\d+ \bearly\b|\d+ \blate\b|\d+:\d")
-        return(regex.findall(self.script))
+    def all_generations_and_times(self, return_as_strings=True):
+        regex = re.compile(r"\d+ \bearly\b|\d+ \blate\b|\d+:\d+")
+        ret = regex.findall(self.script)
+        if return_as_strings:
+            return(ret)
+        else:
+            ret_t = []
+            for r in ret:
+                if ":" in r:
+                    gens = re.compile("\d+")
+                    pair = gens.findall(r)
+                    ret_t.append((int(pair[0]), int(pair[1])))
+                else:
+                    pair = r.split(" ")
+                    ret_t.append((int(pair[0]), str(pair[1])))
+            return(ret_t)
 
     def all_early_events(self):
         regex = re.compile(r"\d+ \bearly\b")
@@ -352,11 +390,11 @@ initialize(){
         return(regex.findall(self.script))
 
     def all_continuous_processes(self):
-        regex = re.compile("\d+:\d")
+        regex = re.compile("\d+:\d+")
         ranges = regex.findall(self.script)
         to_return = []
         for range in ranges:
-            gens = re.compile("\d")
+            gens = re.compile("\d+")
             pair = gens.findall(range)
             to_return.append((int(pair[0]), int(pair[1])))
         return(to_return)
