@@ -548,7 +548,6 @@ initialize(){
             assert time_str in self.all_generations_and_times()
             assert any(string in s for s in self.all_events_at_a_given_time(time_str))
             time_loc = self.script.find(time_str)
-            print(time_loc, "time_loc")
             script_start = self.script[:time_loc]
             script_end = self.script[time_loc:]
             event_loc = script_end.find(string)
@@ -559,6 +558,25 @@ initialize(){
             script_end = event_start + event_end
             self.script = script_start + script_end
 
+    def add_size_change(self, PopulationParametersChange, early=True):
+        p = PopulationParametersChange
+        if early:
+            early_or_late = 'early'
+        else:
+            early_or_late = 'late'
+        if p.population is None:
+            raise ValueError("You must supply a population ID.")
+        if p.initial_size is not None:
+            new_time = (p.time, early_or_late)
+            new_time_st = time_as_string(new_time)
+            # Add new size.
+            self.add_event(time=new_time,
+                event="p%i.setSubpopulationSize(%i)" % (p.population, p.initial_size))
+            # Delete any prior population size changes at this time.
+            st = "p%i.setSubpopulationSize(" % p.population
+            # if new_time_st in self.all_generations_and_times():
+            if sum(st in e for e in self.all_events_at_a_given_time(new_time_st)) == 2:
+                self.delete_event(string=st, time=new_time)
 
     def add_population_parameters_change(self, paramChanges):
         """

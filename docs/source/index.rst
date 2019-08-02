@@ -9,7 +9,7 @@ Welcome to slime's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents 1:
+   :caption: Contents:
    recenthistory-basics
    introduction
    quickstart

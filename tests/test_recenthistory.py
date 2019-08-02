@@ -311,6 +311,23 @@ class TestDemographyConfig(unittest.TestCase):
         self.assertEqual(len(scr.all_events_at_a_given_time("3:9")), 0)
         scr.run_slim(verbose=False)
 
+    def test_size_changes(self):
+        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
+        config1 = msprime.PopulationConfiguration(sample_size=0, initial_size=10, growth_rate=0.1)
+        script = slime.RecentHistory(final_gen=15, chrom_length=10,
+            reference_configs=[config, config1], adm_configs=config1,
+            prop=[0.3,0.7])
+        script.add_size_change(msprime.PopulationParametersChange(time=10,
+                initial_size=15, population=2))
+        script.add_size_change(msprime.PopulationParametersChange(time=10,
+                initial_size=15, population=0))
+        # script.print_script()
+        e_gen10 = script.all_events_at_a_given_time('10 early')
+        self.assertEqual(len(e_gen10), 3)
+        assert 'p0.setSubpopulationSize(15)' in e_gen10
+        assert 'p2.setSubpopulationSize(15)' in e_gen10
+        assert 'p1.setSubpopulationSize(asInteger(p2.individualCount * exp(0.100000)))' not in e_gen10
+        script.run_slim(verbose=False)
 
 class TestExamplesInDocs(unittest.TestCase):
     """
@@ -347,11 +364,37 @@ class TestExamplesInDocs(unittest.TestCase):
                 recombination=1e-1, reference_configs=ref_pops, adm_configs=adm_pop,
                 prop=adm_prop)
         script.run_slim(verbose=False)
-        script.print_script()
+        # script.print_script()
+
+    def test_recenthistory_constant_growth(self):
+        ref_pops = [msprime.PopulationConfiguration(sample_size=10, initial_size=100),
+               msprime.PopulationConfiguration(sample_size=10, initial_size=100)]
+        adm_pop = msprime.PopulationConfiguration(sample_size=20, initial_size=50, growth_rate=0.1)
+        adm_prop = [0.3, 0.7]
+        gens = 20 # 100
+        script = slime.RecentHistory(final_gen=gens, chrom_length=10,
+                recombination=1e-1, reference_configs=ref_pops, adm_configs=adm_pop,
+                prop=adm_prop)
+        script.run_slim(verbose=False)
+
+    def test_recenthistory_instant_size_change(self):
+        ref_pops = [msprime.PopulationConfiguration(sample_size=10, initial_size=100),
+                msprime.PopulationConfiguration(sample_size=10, initial_size=100)]
+        adm_pop = msprime.PopulationConfiguration(sample_size=20, initial_size=50)
+        adm_prop = [0.3, 0.7]
+        gens = 20 # 100
+        ch = msprime.PopulationParametersChange(time=11, initial_size=25, population_id=2)
+        script = slime.RecentHistory(final_gen=gens, chrom_length=10,
+            recombination=1e-1, reference_configs=ref_pops, adm_configs=adm_pop,
+            prop=adm_prop)
+        script.add_size_change(ch)
+        script.run_slim(verbose=False)
+
 
 class TestDemography(unittest.TestCase):
     """
     Runs SLiM on randomly-generated scripts under various models of demography.
+    This is mainly to ensure that the generated scripts are actually valid.
     """
 
     def test_many_populations(self):
@@ -393,5 +436,21 @@ class TestDemography(unittest.TestCase):
             ['1 early', '1 late', '2 early', '2 late', '3:16', '17 early', '17 late'])
         # script.print_script()
         script.run_slim(verbose=False)
+
+    def test_size_changes(self):
+        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
+        config1 = msprime.PopulationConfiguration(sample_size=0, initial_size=10, growth_rate=0.1)
+        script = slime.RecentHistory(final_gen=30, chrom_length=10,
+            reference_configs=[config, config1], adm_configs=config1,
+            prop=[0.3,0.7])
+        for pop in [0, 1, 2]:
+            times = random.sample(range(3,29), 3)
+            new_sizes = random.sample(range(10, 25), 3)
+            for i in range(0,3):
+                script.add_size_change(msprime.PopulationParametersChange(time=times[i],
+                    initial_size=new_sizes[i], population=pop))
+        # script.print_script()
+        script.run_slim(verbose=False)
+
 
 
