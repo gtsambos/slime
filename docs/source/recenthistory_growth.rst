@@ -8,7 +8,7 @@ Constant growth
 ***************
 
 To specify a constant rate of population growth for any of the populations, pass
-a ``growth`` parameter to the corresponding ``msprime.PopulationConfiguration`` object.
+an exponential ``growth`` parameter to the corresponding ``msprime.PopulationConfiguration`` object.
 
 For instance, suppose our admixed population grows at a rate of ``exp(0.1)`` in each
 new generation:

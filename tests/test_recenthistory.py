@@ -328,6 +328,7 @@ class TestDemographyConfig(unittest.TestCase):
         assert 'p2.setSubpopulationSize(15)' in e_gen10
         assert 'p1.setSubpopulationSize(asInteger(p2.individualCount * exp(0.100000)))' not in e_gen10
         script.run_slim(verbose=False)
+        
 
 class TestExamplesInDocs(unittest.TestCase):
     """

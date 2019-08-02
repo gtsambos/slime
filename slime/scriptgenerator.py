@@ -96,8 +96,8 @@ initialize(){
             self.initialize("""for (line in lines)
     {
         components = strsplit(line, " ");
-        ends = c(ends, asInteger(components[1]));
-        rates = c(rates, asFloat(components[2]));
+        ends = c(ends, asInteger(components[0]));
+        rates = c(rates, asFloat(components[1]));
     }
     ends = ends - 1""")
             self.initialize("rates = rates * 1e-8")
