@@ -1,15 +1,22 @@
 .. _sec_recenthistory:
 
-Specifying admixture history
-============================
+======================================
+1. Specifying the history of admixture
+======================================
 
 Don't know how to program in Eidos?
 Don't worry!
 You can use our script generator to create SLiM scripts for use
-with ``slime``! Hooray
+with ``slime``!
+Hooray for you.
+
+Contents of this section:
+
+ * :ref:`sec_recenthistory_defaults`
+ * :ref:`sec_recenthistory_growth`
 
 
-.. _sec_recenthistory-defaults:
+.. _sec_recenthistory_defaults:
 
 **********
 Quickstart
@@ -66,17 +73,5 @@ stage using the ``print_script()`` method:
     >>> script.print_script()
 
 
-.. _sec_recenthistory-growth:
-
-******
-Growth
-******
-
-To specify a constant rate of population growth for any of the populations, just input
-a ``growth`` parameter in the corresponding ``msprime.PopulationConfiguration`` object.
-
-For instance, suppose our admixed population grows at a rate of ``exp(0.1)`` in eachh
-new generation:
-
-    >>> adm_pop = msprime.PopulationConfiguration(sample_size=20, initial_size=50, growth_rate=0.1)
+.. include:: recenthistory_growth.rst
 
