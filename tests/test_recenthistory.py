@@ -5,6 +5,7 @@ import unittest
 import re
 import random
 import numpy as np
+import utils
 
 class TestRecentHistory(unittest.TestCase):
 
@@ -453,5 +454,13 @@ class TestDemography(unittest.TestCase):
         # script.print_script()
         script.run_slim(verbose=False)
 
+    def test_random_recombination_map(self):
+        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
+        utils.random_recombination_map(sequence_length=100, no_rows=20, 
+            filename='examples/test.recomb')
+        script = slime.RecentHistory(final_gen=20, chrom_length=100,
+            reference_configs=[config, config], adm_configs=config,
+            prop=[0.3,0.7], recombination='examples/test.recomb')
+        script.run_slim(verbose=False)
 
 
