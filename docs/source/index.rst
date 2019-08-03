@@ -8,14 +8,16 @@ Welcome to slime's documentation!
 =================================
 
 .. toctree::
+   :glob:
    :maxdepth: 2
-   :caption: Contents:
-   recenthistory
-   introduction
-   quickstart
+   :hidden:
+
+   introduction/introduction
+   quickstart/quickstart
+   recenthistory/recenthistory
 
 
-.. include:: introduction.rst
+.. include:: introduction/introduction.rst
 
 ===================
 The basic procedure
@@ -24,5 +26,4 @@ You must have a SLiM script describing the recent history of admixture.
 In slime, we provide a script generator that allows you to generate these scripts for
 a flexible range of situations in Python.
 
-.. include:: recenthistory.rst
-
+.. include:: recenthistory/recenthistory.rst
