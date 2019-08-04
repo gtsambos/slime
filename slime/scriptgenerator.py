@@ -464,7 +464,7 @@ initialize(){
         ind = self.population_labels.index(popLabel)
         self.initial_growth_rates.append(popConfig.growth_rate)
 
-    def add_admixed_population(self, popConfig, popLabel, proportions, single_pulse = True, migration_rate = None):
+    def add_admixed_population(self, popConfig, popLabel, proportions, migration_rate = None):
         if not isinstance(popConfig, msprime.PopulationConfiguration):
             raise TypeError("popConfig must be a msprime.PopulationConfiguration object.")
         sample_size = popConfig.sample_size
@@ -485,35 +485,40 @@ initialize(){
         self.initial_growth_rates.append(popConfig.growth_rate)
             # self.add_continuous_process((2, self.final_gen),
             #     event = "p%i.setSubpopulationSize(asInteger(p%i.individualCount * %f))" % (ind, ind, growth_rate))
-        # Add admixture in.
-        if not len(proportions) == len(self.population_labels) - 1:
-            raise SystemError('A proportion must be allocated to each reference population.')
-        if np.sum(proportions) != 1:
-            raise ValueError('Admixture proportions must sum to 1.')
-        for p in proportions:
-            assert p >= 0
-            assert p <= 1
-        pop_labels = ["p%i" % i for i in range(0, len(self.population_labels) - 1)]
-        command_pops = list_to_slim_vector(pop_labels)
-        prop_as_string = ["%f" % i for i in proportions]
-        command_prop = list_to_slim_vector(prop_as_string)
-        command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, command_prop)
-        self.add_event((1, 'late'), "%s" % command)
-        if single_pulse:
-            zeros_as_string = ["0.0" for i in range(0, len(self.population_labels) - 1)]
-            final_zeros = list_to_slim_vector(zeros_as_string)
-            end_command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, final_zeros)
-            self.add_event((2, 'late'), end_command)
-        else:
-            assert migration_rate >= 0
-            assert migration_rate <= 1
-            pop_labels = ["p%i" % i for i in range(0, len(self.population_labels))]
-            command_pops = list_to_slim_vector(pop_labels)
-            scaled_props = ["%f" % (p * migration_rate) for p in proportions]
-            scaled_props.append("%f" % (1 - migration_rate))
-            command_prop = list_to_slim_vector(scaled_props)
-            end_command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, command_prop)
-            self.add_event((2, 'late'), end_command)
+        # Add admixture into the script.
+        self.add_mass_migration(prop=proportions, time=(1, 'late'))
+
+        # if not len(proportions) == len(self.population_labels) - 1:
+        #     raise SystemError('A proportion must be allocated to each reference population.')
+        # if np.sum(proportions) != 1:
+        #     raise ValueError('Admixture proportions must sum to 1.')
+
+        # Initialize admixture. 
+
+        # for p in proportions:
+        #     assert p >= 0
+        #     assert p <= 1
+        # pop_labels = ["p%i" % i for i in range(0, len(self.population_labels) - 1)]
+        # command_pops = list_to_slim_vector(pop_labels)
+        # prop_as_string = ["%f" % i for i in proportions]
+        # command_prop = list_to_slim_vector(prop_as_string)
+        # command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, command_prop)
+        # self.add_event((1, 'late'), "%s" % command)
+        # if single_pulse:
+        #     zeros_as_string = ["0.0" for i in range(0, len(self.population_labels) - 1)]
+        #     final_zeros = list_to_slim_vector(zeros_as_string)
+        #     end_command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, final_zeros)
+        #     self.add_event((2, 'late'), end_command)
+        # else:
+        #     assert migration_rate >= 0
+        #     assert migration_rate <= 1
+        #     pop_labels = ["p%i" % i for i in range(0, len(self.population_labels))]
+        #     command_pops = list_to_slim_vector(pop_labels)
+        #     scaled_props = ["%f" % (p * migration_rate) for p in proportions]
+        #     scaled_props.append("%f" % (1 - migration_rate))
+        #     command_prop = list_to_slim_vector(scaled_props)
+        #     end_command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, command_prop)
+        #     self.add_event((2, 'late'), end_command)
 
     def add_migration_rate(self, rates, time=(2, 'late')):
         """
@@ -607,7 +612,6 @@ initialize(){
                 event="p%i.setSubpopulationSize(%i)" % (p.population, p.initial_size))
             # Delete any prior population size changes at this time.
             st = "p%i.setSubpopulationSize(" % p.population
-            # if new_time_st in self.all_generations_and_times():
             if sum(st in e for e in self.all_events_at_a_given_time(new_time_st)) == 2:
                 self.delete_event(string=st, time=new_time)
 
