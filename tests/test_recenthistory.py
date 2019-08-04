@@ -279,18 +279,12 @@ class TestDemographyConfig(unittest.TestCase):
         scr.run_slim(verbose=False)
         # scr.print_script()
     def test_nonconstant_recombination(self):
-        config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
-        scr = slime.RecentHistory(final_gen = 5, chrom_length = 9,
-            reference_configs = [config, config], adm_configs = config,
-            prop = [0.5, 0.5], recombination = "examples/recomb_map_chromlength10.txt")
-        # scr.print_script()
+        scr = utils.basic_two_way_admixture(length=9, 
+            rho = "examples/recomb_map_chromlength10.txt")
         scr.run_slim(verbose=False)
 
     def test_add_demographic_events(self):
-        config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
-        scr = slime.RecentHistory(final_gen = 10, chrom_length = 10,
-            reference_configs = [config, config], adm_configs = config,
-            prop = [0.5, 0.5])
+        scr = utils.basic_two_way_admixture(prop=[.5,.5])
         change1 = msprime.PopulationParametersChange(3, growth_rate =  .5, population_id = 0)
         change2 = msprime.PopulationParametersChange(6, growth_rate =  .6, population_id = 0)
         change3 = msprime.PopulationParametersChange(2, growth_rate =  .3, population_id = 1)
@@ -300,10 +294,7 @@ class TestDemographyConfig(unittest.TestCase):
         scr.run_slim(verbose=False)
 
     def test_delete_event(self):
-        config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
-        scr = slime.RecentHistory(final_gen = 10, chrom_length = 10,
-            reference_configs = [config, config], adm_configs = config,
-            prop = [0.5, 0.5])
+        scr = utils.basic_two_way_admixture(prop=[.5,.5], final_gen=10)
         scr.delete_event("simulationFinished")
         self.assertEqual(len(scr.all_events_at_a_given_time('10 late')), 1)
         change1 = msprime.PopulationParametersChange(3, growth_rate =  .5, population_id = 0)
@@ -329,6 +320,23 @@ class TestDemographyConfig(unittest.TestCase):
         assert 'p2.setSubpopulationSize(15)' in e_gen10
         assert 'p1.setSubpopulationSize(asInteger(p2.individualCount * exp(0.100000)))' not in e_gen10
         script.run_slim(verbose=False)
+
+    def test_migration_rate_changes(self):
+        scr = utils.basic_two_way_admixture(rho=0)
+        scr.add_migration_rate(time=(5, 'late'), rates=[.01,.02])
+        # scr.print_script()
+        scr.run_slim(verbose=False)  
+
+        scr = utils.basic_two_way_admixture(rho=0)
+        scr.add_migration_rate(rates=[.05,.1])
+        # scr.print_script()
+        scr.run_slim(verbose=False)  
+
+    def test_mass_migration(self):
+        scr = utils.basic_two_way_admixture(rho=.001)
+        scr.add_mass_migration(prop=[.2,.2], time=(9, 'late'))
+        # scr.print_script()
+        scr.run_slim(verbose=False)
         
 
 class TestExamplesInDocs(unittest.TestCase):
@@ -392,6 +400,21 @@ class TestExamplesInDocs(unittest.TestCase):
         script.add_size_change(ch)
         script.run_slim(verbose=False)
 
+    def test_recenthistory_migration_rates(self):
+        config = msprime.PopulationConfiguration(sample_size=10, initial_size=100)
+        script = slime.RecentHistory(final_gen=20, chrom_length=10, recombination=.01,
+            reference_configs=[config, config], adm_configs=config, prop=[0.3,0.7])
+        script.add_migration_rate(rates=[.01,.02])
+        script.add_migration_rate(rates=[0.0, 0.0], time=(8, 'late'))
+        # script.print_script()
+        script.run_slim(verbose=False)
+
+    def test_recenthistory_mass_migration(self):
+        config = msprime.PopulationConfiguration(sample_size=10, initial_size=100)
+        script = slime.RecentHistory(final_gen=20, chrom_length=10, recombination=.001,
+            reference_configs=[config, config], adm_configs=config, prop=[0.3,0.7])
+        script.add_mass_migration(prop=[.1, .1], time=(9, 'late'))
+        script.run_slim(verbose=False)
 
 class TestDemography(unittest.TestCase):
     """
@@ -462,5 +485,4 @@ class TestDemography(unittest.TestCase):
             reference_configs=[config, config], adm_configs=config,
             prop=[0.3,0.7], recombination='examples/test.recomb')
         script.run_slim(verbose=False)
-
 

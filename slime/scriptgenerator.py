@@ -18,6 +18,7 @@ class RecentHistory(object):
         self.scriptfile = scriptfile
         self.model_type = model_type
         self.final_gen = int(final_gen)
+        self.initial_prop = prop
         assert final_gen > 0
         self.chrom_length = chrom_length
         assert chrom_length > 0
@@ -236,7 +237,6 @@ initialize(){
                     for e in existing_events:
                         self.add_event_over_time_range(t[0], time[0] - 1, e)
                             
-                # print(time)
                 self.add_new_single_time((time[0], early_or_late))
                 if time[1] == 'late':
                     self.add_new_single_time(time)
@@ -515,6 +515,39 @@ initialize(){
             end_command = "p%i.setMigrationRates(%s,%s)" % (len(self.population_labels) - 1, command_pops, command_prop)
             self.add_event((2, 'late'), end_command)
 
+    def add_migration_rate(self, rates, time=(2, 'late')):
+        """
+        Specifies rates of migration from references to admixed population.
+        """
+        assert all(r >= 0 for r in rates) and all(r <=1 for r in rates)
+        assert len(rates) == len(self.populations) - 1
+        ref_pops = self.populations[:-1]
+        adm_pop = self.populations[-1]
+        # Add migration proportions.
+        ref_pop_vector = list_to_slim_vector(["p%i" % i for i in ref_pops])
+        rates_vector = list_to_slim_vector(rates)
+        event_to_add = "p%i.setMigrationRates(%s, %s)" % (adm_pop, ref_pop_vector, rates_vector)
+        self.add_event(time=time, event=event_to_add)
+        # Remove previous migrations at this time.
+        time_st = time_as_string(time)
+        st = "p%i.setMigrationRates" % adm_pop
+        if sum(st in e for e in self.all_events_at_a_given_time(time_st)) == 2:
+            self.delete_event(string=st, time=time)
+
+    def add_mass_migration(self, prop, time):
+        """
+        Specifies a mass migration event from reference populations into admixed 
+        population at a specified time.
+        This is like changing the migration rate, but the migration rate is
+        changed to 0 afterwards. 
+        # Later: would be useful if it is changed back to original migration rate?
+        """
+        self.add_migration_rate(rates=prop, time=time)
+        # Change later migration rate back to 0.
+        if time[0] != self.final_gen:
+            no_refs = len(self.populations) - 1
+            self.add_migration_rate(rates=[0 for i in range(0, no_refs)], time=(time[0]+1, 'late'))
+
     def add_demographic_events(self, event_list):
         # Sort events by type.
         param_changes = []
@@ -677,8 +710,9 @@ class EventList(object):
         self.events.append(event)
 
 def list_to_slim_vector(list_of_strings):
+    l = [str(s) for s in list_of_strings]
     # Changes ['s1', 's2', 's3'] into 'c(s1,s2,s3)'
-    return("c(" + ",".join(list_of_strings) + ")")
+    return("c(" + ",".join(l) + ")")
             
 class MutationTypes(object):
     """

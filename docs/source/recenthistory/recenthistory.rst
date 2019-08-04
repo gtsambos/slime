@@ -16,6 +16,7 @@ Contents of this section:
  * :ref:`sec_recenthistory_quickstart`
  * :ref:`sec_recenthistory_recombination`
  * :ref:`sec_recenthistory_growth`
+ * :ref:`sec_recenthistory_migration`
 
 
 .. include:: recenthistory_quickstart.rst
@@ -23,6 +24,8 @@ Contents of this section:
 .. include:: recenthistory_recombination.rst
 
 .. include:: recenthistory_growth.rst
+
+.. include:: recenthistory_migration.rst
 
 
 
