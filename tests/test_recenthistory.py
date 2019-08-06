@@ -337,6 +337,16 @@ class TestDemographyConfig(unittest.TestCase):
         scr.add_mass_migration(prop=[.2,.2], time=(9, 'late'))
         # scr.print_script()
         scr.run_slim(verbose=False)
+
+    def test_mutations(self):
+        muts = slime.MutationTypes(mutation_rate=.005, selection_coeffs=[0.2,0.6],
+            proportions=[.5,.5], dominance_coeffs=[.7, .45])
+        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
+        script = slime.RecentHistory(final_gen=20, chrom_length=100,
+            reference_configs=[config, config], adm_configs=config,
+            prop=[0.3,0.7], mutations=muts)
+        # script.print_script()
+        script.run_slim(verbose=False)
         
 
 class TestExamplesInDocs(unittest.TestCase):
@@ -414,6 +424,16 @@ class TestExamplesInDocs(unittest.TestCase):
         script = slime.RecentHistory(final_gen=20, chrom_length=10, recombination=.001,
             reference_configs=[config, config], adm_configs=config, prop=[0.3,0.7])
         script.add_mass_migration(prop=[.1, .1], time=(9, 'late'))
+        script.run_slim(verbose=False)
+
+    def test_mutations(self):
+        muts = slime.MutationTypes(mutation_rate=.005, selection_coeffs=[0.2,0.6,.3],
+            proportions=[.5,.4, .1], dominance_coeffs=[.7, .45, .57])
+        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
+        script = slime.RecentHistory(final_gen=20, chrom_length=100,
+            reference_configs=[config, config], adm_configs=config,
+            prop=[0.3,0.7], mutations=muts)
+        # script.print_script()
         script.run_slim(verbose=False)
 
 class TestDemography(unittest.TestCase):
