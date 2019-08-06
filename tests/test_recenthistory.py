@@ -402,7 +402,7 @@ class TestExamplesInDocs(unittest.TestCase):
 
     def test_recenthistory_migration_rates(self):
         config = msprime.PopulationConfiguration(sample_size=10, initial_size=100)
-        script = slime.RecentHistory(final_gen=20, chrom_length=10, recombination=.01,
+        script = slime.RecentHistory(final_gen=20, chrom_length=10, recombination=.001,
             reference_configs=[config, config], adm_configs=config, prop=[0.3,0.7])
         script.add_migration_rate(rates=[.01,.02])
         script.add_migration_rate(rates=[0.0, 0.0], time=(8, 'late'))
@@ -486,3 +486,24 @@ class TestDemography(unittest.TestCase):
             prop=[0.3,0.7], recombination='examples/test.recomb')
         script.run_slim(verbose=False)
 
+    def test_migration_rate_changes(self):
+        scr = utils.basic_two_way_admixture(rho=.001)
+        # Add in some random migrations.
+        for m in range(0, 10):
+            rates = random.sample(range(1, 100), 2)
+            time = random.randint(2, 19)
+            rates = [p/200 for p in rates]
+            scr.add_migration_rate(rates=rates, time = (time, 'late'))
+        # scr.print_script()
+        scr.run_slim(verbose=False)
+
+    def test_mass_migrations(self):
+        scr = utils.basic_two_way_admixture(rho=.001)
+        # Add in some random migrations.
+        for m in range(0, 10):
+            rates = random.sample(range(1, 100), 2)
+            time = random.randint(2, 19)
+            rates = [p/200 for p in rates]
+            scr.add_mass_migration(prop=rates, time = (time, 'late'))
+        # scr.print_script()
+        scr.run_slim(verbose=False)
