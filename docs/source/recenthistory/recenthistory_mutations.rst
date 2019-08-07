@@ -1,5 +1,5 @@
 
-.. sec_recenthistory_mutations:
+.. _sec_recenthistory_mutations:
 
 *********
 Mutations
@@ -28,7 +28,7 @@ mutations to occur in our forward-in-time simulation.
 
 We'll then use this ``MutationTypes`` object to initialize a ``RecentHistory`` object via the ``mutations`` parameter.
 
-    >>> config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
+    >>> config = slime.PopulationConfiguration(initial_size=10)
     >>> script = slime.RecentHistory(final_gen=20, chrom_length=100,
     ...     reference_configs=[config, config], adm_configs=config,
     ...     prop=[0.3,0.7], mutations=muts)

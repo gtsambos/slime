@@ -13,7 +13,7 @@ pulse of migration from the reference populations.
 This can be changed by specifying migration rates from each reference population
 using the ``add_migration_rate`` method:
 
-	>>> config = msprime.PopulationConfiguration(sample_size=10, initial_size=100)
+	>>> config = slime.PopulationConfiguration(initial_size=100)
     >>> script = slime.RecentHistory(final_gen=20, chrom_length=10,
     ...		recombination=.01, reference_configs=[config, config], 
     ...		adm_configs=config, prop=[0.3,0.7])

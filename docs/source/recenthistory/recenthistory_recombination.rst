@@ -22,12 +22,13 @@ For example, the following code indicates a recombination rate of `1e-8` per bas
 Non-uniform recombination
 *************************
 
-A path to a space-delimited text file containing positions and rates can also be passed
-to the ``recombination`` parameter. 
+A path to a space-delimited text file containing positions and rates can also be 
+passed to the ``recombination`` parameter. 
 The first column of the file should contain (ordered) integers representing
 base positions. 
-The second column should contain recombination rates. The rate in the 'n'th row is the
-per-base recombination rate for all bases between the base positions given in the `n`th (inclusive) and `n+1`th (not inclusive) row of the file.
+The second column should contain recombination rates. The rate in the 'n'th row
+is the per-base recombination rate for all bases between the base positions
+given in the `n`th (inclusive) and `n+1`th (not inclusive) row of the file.
 
 Special rows: The position in the final row must be the length of the simulated sequence + n, but note that this row isn't actually used (it's a weird quirk of SLiM)...
 The first row is a header and will be ignored.

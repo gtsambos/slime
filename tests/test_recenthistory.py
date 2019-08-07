@@ -9,7 +9,7 @@ import utils
 
 class TestRecentHistory(unittest.TestCase):
 
-    config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
+    config = slime.PopulationConfiguration(0, 100, growth_rate = 0)
     scr = slime.RecentHistory(final_gen = 5, chrom_length = 10,
         reference_configs = [config, config], adm_configs = config,
         prop = [0.5, 0.5])
@@ -45,7 +45,7 @@ class TestRecentHistory(unittest.TestCase):
         self.assertEqual(generations, sorted(generations))
 
     def test_ordering_inside_events(self):
-        config = msprime.PopulationConfiguration(0, 100, growth_rate = 0)
+        config = slime.PopulationConfiguration(0, 100, growth_rate = 0)
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
@@ -64,7 +64,7 @@ class TestRecentHistory(unittest.TestCase):
         # self.scr.print_script()
 
     def test_add_event_over_time_range(self):
-        config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
+        config = slime.PopulationConfiguration(0, 10, growth_rate = 0)
         scr = slime.RecentHistory(final_gen = 10, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
@@ -83,7 +83,7 @@ class TestRecentHistory(unittest.TestCase):
             ['1 early', '1 late', '2 late', '5 late'])
 
     def test_all_generations_and_times(self):
-        config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
+        config = slime.PopulationConfiguration(0, 10, growth_rate = 0)
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
@@ -121,7 +121,7 @@ class TestRecentHistory(unittest.TestCase):
 
     def test_add_continuous_processes(self):
         # scr = slime.RecentHistory(final_gen = 10, chrom_length = 10)
-        config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
+        config = slime.PopulationConfiguration(0, 10, growth_rate = 0)
         scr = slime.RecentHistory(final_gen = 23, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
@@ -163,8 +163,8 @@ class TestRecentHistory(unittest.TestCase):
             ['first event', 'second event', 'third event'])
 
     def test_break_up_range(self):
-        config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
-        config1 = msprime.PopulationConfiguration(0, 10, growth_rate = 0.01)
+        config = slime.PopulationConfiguration(0, 10, growth_rate = 0)
+        config1 = slime.PopulationConfiguration(0, 10, growth_rate = 0.01)
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
@@ -246,15 +246,15 @@ class TestRecentHistory(unittest.TestCase):
             ['continuous', 'continuous2', 'continuous3'])
 
     def test_break_up_initial_growth(self):
-        config0 = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
-        config1 = msprime.PopulationConfiguration(0, 10, growth_rate = 0.1)
+        config0 = slime.PopulationConfiguration(0, 10, growth_rate = 0)
+        config1 = slime.PopulationConfiguration(0, 10, growth_rate = 0.1)
         scr = slime.RecentHistory(final_gen = 10, chrom_length = 10,
             reference_configs = [config1, config1], adm_configs = config0,
             prop = [0.4, 0.6])
         # scr.print_script()
 
     def test_time_already_in_script(self):
-        config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
+        config = slime.PopulationConfiguration(0, 10, growth_rate = 0)
         scr = slime.RecentHistory(final_gen = 21, chrom_length = 10,
             reference_configs = [config, config, config], adm_configs = config,
             prop = [0.5, 0.4, 0.1])
@@ -262,7 +262,7 @@ class TestRecentHistory(unittest.TestCase):
         self.assertEqual(scr.all_generations_and_times(),
             ['1 early', '1 late', '2 late', '21 late'])
 
-        config1 = msprime.PopulationConfiguration(0, 10, growth_rate = 0.1)
+        config1 = slime.PopulationConfiguration(0, 10, growth_rate = 0.1)
         scr = slime.RecentHistory(final_gen = 11, chrom_length = 10,
             reference_configs = [config1, config], adm_configs = config1,
             prop = [0.5, 0.5])
@@ -272,7 +272,7 @@ class TestRecentHistory(unittest.TestCase):
 class TestDemographyConfig(unittest.TestCase):
 
     def test_basic_input(self):
-        config = msprime.PopulationConfiguration(0, 10, growth_rate = 0)
+        config = slime.PopulationConfiguration(initial_size=10)
         scr = slime.RecentHistory(final_gen = 5, chrom_length = 10,
             reference_configs = [config, config], adm_configs = config,
             prop = [0.5, 0.5])
@@ -304,8 +304,8 @@ class TestDemographyConfig(unittest.TestCase):
         scr.run_slim(verbose=False)
 
     def test_size_changes(self):
-        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
-        config1 = msprime.PopulationConfiguration(sample_size=0, initial_size=10, growth_rate=0.1)
+        config = slime.PopulationConfiguration(initial_size=10)
+        config1 = slime.PopulationConfiguration(initial_size=10, growth_rate=0.1)
         script = slime.RecentHistory(final_gen=15, chrom_length=10,
             reference_configs=[config, config1], adm_configs=config1,
             prop=[0.3,0.7])
@@ -341,7 +341,7 @@ class TestDemographyConfig(unittest.TestCase):
     def test_mutations(self):
         muts = slime.MutationTypes(mutation_rate=.005, selection_coeffs=[0.2,0.6],
             proportions=[.5,.5], dominance_coeffs=[.7, .45])
-        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
+        config = slime.PopulationConfiguration(initial_size=10)
         script = slime.RecentHistory(final_gen=20, chrom_length=100,
             reference_configs=[config, config], adm_configs=config,
             prop=[0.3,0.7], mutations=muts)
@@ -355,9 +355,9 @@ class TestExamplesInDocs(unittest.TestCase):
     """
 
     def test_quickstart(self):
-        ref0_config = msprime.PopulationConfiguration(sample_size=0, initial_size=10, growth_rate=0)
-        ref1_config = msprime.PopulationConfiguration(sample_size=0, initial_size=15, growth_rate=0)
-        adm_config = msprime.PopulationConfiguration(sample_size=5, initial_size=10, growth_rate = 0)
+        ref0_config = slime.PopulationConfiguration(initial_size=10, growth_rate=0)
+        ref1_config = slime.PopulationConfiguration(initial_size=15, growth_rate=0)
+        adm_config = slime.PopulationConfiguration(sample_size=5, initial_size=10, growth_rate = 0)
         adm_props = [0.3, 0.7]
         rho = 0.1
         length = 10
@@ -375,9 +375,9 @@ class TestExamplesInDocs(unittest.TestCase):
         self.assertEqual(ts.first().time(root0), 15)
 
     def test_recenthistory_defaults(self):
-        ref_pops = [msprime.PopulationConfiguration(sample_size=10, initial_size=100),
-               msprime.PopulationConfiguration(sample_size=10, initial_size=100)]
-        adm_pop = msprime.PopulationConfiguration(sample_size=20, initial_size=50)
+        ref_pops = [slime.PopulationConfiguration(sample_size=10, initial_size=100),
+               slime.PopulationConfiguration(sample_size=10, initial_size=100)]
+        adm_pop = slime.PopulationConfiguration(sample_size=20, initial_size=50)
         adm_prop = [0.3, 0.7]
         gens = 20 # 100
         script = slime.RecentHistory(final_gen=gens, chrom_length=10,
@@ -387,9 +387,9 @@ class TestExamplesInDocs(unittest.TestCase):
         # script.print_script()
 
     def test_recenthistory_constant_growth(self):
-        ref_pops = [msprime.PopulationConfiguration(sample_size=10, initial_size=100),
-               msprime.PopulationConfiguration(sample_size=10, initial_size=100)]
-        adm_pop = msprime.PopulationConfiguration(sample_size=20, initial_size=50, growth_rate=0.1)
+        ref_pops = [slime.PopulationConfiguration(sample_size=10, initial_size=100),
+               slime.PopulationConfiguration(sample_size=10, initial_size=100)]
+        adm_pop = slime.PopulationConfiguration(sample_size=20, initial_size=50, growth_rate=0.1)
         adm_prop = [0.3, 0.7]
         gens = 20 # 100
         script = slime.RecentHistory(final_gen=gens, chrom_length=10,
@@ -398,9 +398,9 @@ class TestExamplesInDocs(unittest.TestCase):
         script.run_slim(verbose=False)
 
     def test_recenthistory_instant_size_change(self):
-        ref_pops = [msprime.PopulationConfiguration(sample_size=10, initial_size=100),
-                msprime.PopulationConfiguration(sample_size=10, initial_size=100)]
-        adm_pop = msprime.PopulationConfiguration(sample_size=20, initial_size=50)
+        ref_pops = [slime.PopulationConfiguration(sample_size=10, initial_size=100),
+                slime.PopulationConfiguration(sample_size=10, initial_size=100)]
+        adm_pop = slime.PopulationConfiguration(sample_size=20, initial_size=50)
         adm_prop = [0.3, 0.7]
         gens = 20 # 100
         ch = msprime.PopulationParametersChange(time=11, initial_size=25, population_id=2)
@@ -411,7 +411,7 @@ class TestExamplesInDocs(unittest.TestCase):
         script.run_slim(verbose=False)
 
     def test_recenthistory_migration_rates(self):
-        config = msprime.PopulationConfiguration(sample_size=10, initial_size=100)
+        config = slime.PopulationConfiguration(sample_size=10, initial_size=100)
         script = slime.RecentHistory(final_gen=20, chrom_length=10, recombination=.001,
             reference_configs=[config, config], adm_configs=config, prop=[0.3,0.7])
         script.add_migration_rate(rates=[.01,.02])
@@ -420,7 +420,7 @@ class TestExamplesInDocs(unittest.TestCase):
         script.run_slim(verbose=False)
 
     def test_recenthistory_mass_migration(self):
-        config = msprime.PopulationConfiguration(sample_size=10, initial_size=100)
+        config = slime.PopulationConfiguration(sample_size=10, initial_size=100)
         script = slime.RecentHistory(final_gen=20, chrom_length=10, recombination=.001,
             reference_configs=[config, config], adm_configs=config, prop=[0.3,0.7])
         script.add_mass_migration(prop=[.1, .1], time=(9, 'late'))
@@ -429,7 +429,7 @@ class TestExamplesInDocs(unittest.TestCase):
     def test_mutations(self):
         muts = slime.MutationTypes(mutation_rate=.005, selection_coeffs=[0.2,0.6,.3],
             proportions=[.5,.4, .1], dominance_coeffs=[.7, .45, .57])
-        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
+        config = slime.PopulationConfiguration(initial_size=10)
         script = slime.RecentHistory(final_gen=20, chrom_length=100,
             reference_configs=[config, config], adm_configs=config,
             prop=[0.3,0.7], mutations=muts)
@@ -443,7 +443,7 @@ class TestDemography(unittest.TestCase):
     """
 
     def test_many_populations(self):
-        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10, growth_rate=0)
+        config = slime.PopulationConfiguration(initial_size=10, growth_rate=0)
         num_pops = random.randint(5, 15)
         ref_configs = [config for i in range(0, num_pops)]
         props = np.zeros(num_pops)
@@ -470,9 +470,9 @@ class TestDemography(unittest.TestCase):
     def test_constantly_growing_populations(self):
         ref_configs = []
         for pop in range(0,3):
-            ref_configs.append(msprime.PopulationConfiguration(0, initial_size=10, 
+            ref_configs.append(slime.PopulationConfiguration(initial_size=10, 
                 growth_rate=random.randint(1,10)/100))
-        adm_config = msprime.PopulationConfiguration(0, initial_size=10,
+        adm_config = slime.PopulationConfiguration(initial_size=10,
             growth_rate = random.randint(1,10)/100)
         script = slime.RecentHistory(final_gen=17, chrom_length=10,
             reference_configs=ref_configs, adm_configs=adm_config,
@@ -483,8 +483,8 @@ class TestDemography(unittest.TestCase):
         script.run_slim(verbose=False)
 
     def test_size_changes(self):
-        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
-        config1 = msprime.PopulationConfiguration(sample_size=0, initial_size=10, growth_rate=0.1)
+        config = slime.PopulationConfiguration(initial_size=10)
+        config1 = slime.PopulationConfiguration(initial_size=10, growth_rate=0.1)
         script = slime.RecentHistory(final_gen=30, chrom_length=10,
             reference_configs=[config, config1], adm_configs=config1,
             prop=[0.3,0.7])
@@ -498,7 +498,7 @@ class TestDemography(unittest.TestCase):
         script.run_slim(verbose=False)
 
     def test_random_recombination_map(self):
-        config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
+        config = slime.PopulationConfiguration(initial_size=10)
         utils.random_recombination_map(sequence_length=100, no_rows=20, 
             filename='examples/test.recomb')
         script = slime.RecentHistory(final_gen=20, chrom_length=100,

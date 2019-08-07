@@ -8,13 +8,12 @@ Constant growth
 ***************
 
 To specify a constant rate of population growth for any of the populations, pass
-an exponential ``growth`` parameter to the corresponding ``msprime.PopulationConfiguration`` object.
+an exponential ``growth`` parameter to the corresponding ``slime.PopulationConfiguration`` object.
 
 For instance, suppose our admixed population grows at a rate of ``exp(0.1)`` in each
 new generation:
 
-    >>> adm_pop = msprime.PopulationConfiguration(sample_size=20, initial_size=50,
-    ...		growth_rate=0.1)
+    >>> adm_pop = slime.PopulationConfiguration(initial_size=50, growth_rate=0.1)
 
 
 Instant population size changes
@@ -29,7 +28,7 @@ For instance, suppose our admixed population has size 25 from generation 11 onwa
 	...		population_id=2)
     >>> script = slime.RecentHistory(final_gen=gens, chrom_length=1e7,
     ...    recombination=1e-8, reference_configs=ref_pops, adm_configs=adm_pop,
-    ...    prop)
+    ...    prop = [0.5, 0.7])
     >>> script.add_size_change(PopulationParametersChange=size_change)
 
 Read more about ``msprime.PopulationParametersChange`` objects here_.

@@ -51,7 +51,7 @@ initialize(){
             self.ref_labels = ref_labels
         assert len(reference_configs) > 1
         for pop, label in zip(reference_configs, self.ref_labels):
-            assert isinstance(pop, msprime.PopulationConfiguration)
+            assert isinstance(pop, PopulationConfiguration)
             self.add_reference_population(pop, label)
 
         if adm_label is None:
@@ -62,7 +62,7 @@ initialize(){
         for p in prop: assert p >=0 and p <= 1
         assert sum(prop) == 1
         assert len(reference_configs) == len(prop)
-        assert isinstance(adm_configs, msprime.PopulationConfiguration)
+        assert isinstance(adm_configs, PopulationConfiguration)
         self.add_admixed_population(adm_configs, adm_label, proportions=prop)
 
         # Add mutations.
@@ -445,8 +445,8 @@ initialize(){
         self.script = new_script
 
     def add_reference_population(self, popConfig, popLabel):
-        if not isinstance(popConfig, msprime.PopulationConfiguration):
-            TypeError("popConfig must be a msprime.PopulationConfiguration object.")
+        if not isinstance(popConfig, PopulationConfiguration):
+            TypeError("popConfig must be a slime.PopulationConfiguration object.")
         sample_size = popConfig.sample_size
         initial_size = popConfig.initial_size
         growth_rate = popConfig.growth_rate
@@ -465,8 +465,8 @@ initialize(){
         self.initial_growth_rates.append(popConfig.growth_rate)
 
     def add_admixed_population(self, popConfig, popLabel, proportions, migration_rate = None):
-        if not isinstance(popConfig, msprime.PopulationConfiguration):
-            raise TypeError("popConfig must be a msprime.PopulationConfiguration object.")
+        if not isinstance(popConfig, PopulationConfiguration):
+            raise TypeError("popConfig must be a slime.PopulationConfiguration object.")
         sample_size = popConfig.sample_size
         initial_size = popConfig.initial_size
         growth_rate = popConfig.growth_rate
@@ -684,6 +684,7 @@ def list_to_slim_vector(list_of_strings):
     # Changes ['s1', 's2', 's3'] into 'c(s1,s2,s3)'
     return("c(" + ",".join(l) + ")")
             
+
 class MutationTypes(object):
     """
     Holds information about mutations to put into the simulation.
@@ -718,5 +719,18 @@ class MutationTypes(object):
         for m in MutationType:
             print("initializeMutationType(%s);" % m)
         print("initializeGenomicElementType(%s);" % GenomicElementType)
+
+
+class PopulationConfiguration(object):
+    """
+    Analogue of msprime.PopulationConfiguration objects.
+    """
+    def __init__(self, initial_size, sample_size = None, growth_rate = 0):
+        self.initial_size = initial_size
+        if sample_size is None:
+            self.sample_size = initial_size
+        else:
+            self.sample_size = sample_size
+        self.growth_rate = growth_rate
 
 

@@ -28,7 +28,7 @@ def random_recombination_map(sequence_length, no_rows, filename=None, beta_pars=
 
 
 def basic_two_way_admixture(length=10, final_gen=20, prop=[0.3,0.7], rho=.001):
-    config = msprime.PopulationConfiguration(sample_size=0, initial_size=10)
+    config = slime.PopulationConfiguration(sample_size=0, initial_size=10)
     script = slime.RecentHistory(final_gen=final_gen, chrom_length=length,
             reference_configs=[config, config], adm_configs=config, recombination=rho,
             prop=prop)

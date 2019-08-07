@@ -7,10 +7,10 @@ Quickstart
 SLiM scripts can be created from ``slime.RecentHistory`` objects.
 The following code shows a simple, minimal demographic history of admixture:
 
-    >>> ref_pops = [msprime.PopulationConfiguration(sample_size=10, initial_size=100), 
-    ...      msprime.PopulationConfiguration(sample_size=10, initial_size=100)]
+    >>> ref_pops = [slime.PopulationConfiguration(initial_size=100), 
+    ...      slime.PopulationConfiguration(initial_size=100)]
 
-    >>> adm_pop = msprime.PopulationConfiguration(sample_size=20, initial_size=50)
+    >>> adm_pop = slime.PopulationConfiguration(initial_size=50)
 
     >>> script = slime.RecentHistory(final_gen=100, chrom_length=1e7,
     ...    recombination=1e-8, reference_configs=ref_pops, adm_configs=adm_pop,

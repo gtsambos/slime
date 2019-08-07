@@ -13,7 +13,6 @@ Welcome to slime's documentation!
    :hidden:
 
    introduction/introduction
-   quickstart/quickstart
    recenthistory/recenthistory
 
 
@@ -26,4 +25,3 @@ You must have a SLiM script describing the recent history of admixture.
 In slime, we provide a script generator that allows you to generate these scripts for
 a flexible range of situations in Python.
 
-.. include:: recenthistory/recenthistory.rst
