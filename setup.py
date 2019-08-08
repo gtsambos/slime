@@ -11,15 +11,13 @@ setuptools.setup(
 	description="A package that simulates tree sequences with local ancestry information.",
 	long_description=long_description,
 	long_description_content_type="text/markdown",
-	url="https://github.com/tskit-dev/tskit",
+	url="https://github.com/gtsambos/slime",
 	packages=setuptools.find_packages(),
 	classifiers=[
 		"Programming Language :: Python :: 3",
 		"License :: OSI Approved :: MIT License",
-		"Operating System :: Mac OSX and maybe others",
+		"Operating System :: OS Independent",
 	],
-	install_requires=["numpy", "tskit", "msprime", "pyslim"],
-	setup_requires=["setuptools_scm"],
-	use_scm_version={"write_to": "slime/_version.py"},
+	install_requires=["numpy", "tskit", "msprime", "pyslim", "pandas"],
 	license="MIT"
 	)
