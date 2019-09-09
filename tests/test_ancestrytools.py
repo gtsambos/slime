@@ -2,26 +2,34 @@ import slime
 import unittest
 import msprime, tskit
 
-class TestAncestryTables(unittest.TestCase):
+class TestAncestryTableClass(unittest.TestCase):
 
-    # A simple example to test on.
-    pop_configs_ex = [
-    msprime.PopulationConfiguration(sample_size=3, initial_size = 500, growth_rate = 0),
-    msprime.PopulationConfiguration(sample_size=3, initial_size = 500, growth_rate = 0)]
+    def test_initialize(self):
+        tab = slime.AncestryTable()
+        print(tab)
+        # print(dir(tab))
+        # tab.add_row(left=0, right=1, ancestor=6, population=1, child=0)
 
-    migration_rates_ex = np.array([
-    [0, 0.05],
-    [0.02, 0]])
+# class TestAncestryTables(unittest.TestCase):
 
-    demographic_events_ex = [
-        msprime.MigrationRateChange(time = 100, rate = 0.01, matrix_index=(0, 1))]
+#     # A simple example to test on.
+#     pop_configs_ex = [
+#     msprime.PopulationConfiguration(sample_size=3, initial_size = 500, growth_rate = 0),
+#     msprime.PopulationConfiguration(sample_size=3, initial_size = 500, growth_rate = 0)]
 
-    # Simulate!
-    ts_ex = msprime.simulate(
-        population_configurations = pop_configs_ex, 
-        migration_matrix = migration_rates_ex, length = 1000, 
-        demographic_events = demographic_events_ex, recombination_rate = 1e-6,
-        random_seed= 23)
+#     migration_rates_ex = np.array([
+#     [0, 0.05],
+#     [0.02, 0]])
+
+#     demographic_events_ex = [
+#         msprime.MigrationRateChange(time = 100, rate = 0.01, matrix_index=(0, 1))]
+
+#     # Simulate!
+#     ts_ex = msprime.simulate(
+#         population_configurations = pop_configs_ex, 
+#         migration_matrix = migration_rates_ex, length = 1000, 
+#         demographic_events = demographic_events_ex, recombination_rate = 1e-6,
+#         random_seed= 23)
 
     '''
     Here's the ancestry table (unsorted) 
@@ -36,5 +44,7 @@ class TestAncestryTables(unittest.TestCase):
 10  0.00000000  898.33110615    0  3
 11  898.33110615    1000.00000000   0  1
     '''
+
+    # def test_simple_case(self):
 
 
