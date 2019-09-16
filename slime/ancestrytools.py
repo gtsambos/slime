@@ -8,6 +8,13 @@ from matplotlib.patches import Polygon
 import collections
 
 
+def check_row_lengths(left, right, population, child, ancestor):
+    assert len(left) == len(right)
+    assert len(right) == len(population)
+    assert len(population) == len(child)
+    assert len(ancestor) == len(child)
+
+
 AncestryTableRow = collections.namedtuple(
     "AncestryTableRow",
     ["left", "right", "ancestor", "population", "child"])
@@ -20,6 +27,8 @@ class AncestryTable(object):
 
     :ivar left: The array of left coordinates.
     :vartype left: numpy.ndarray, dtype=np.float64
+    :ivar right: The array of right coordinates.
+    :vartype right: numpy.ndarray, dtype=np.float64
     """
 
     def __init__(self):
@@ -42,7 +51,7 @@ class AncestryTable(object):
         child = self.child
         ret = "id\tleft\t\tright\t\tancestor\tpopulation\tchild\n"
         for j in range(self.num_rows):
-            ret += "{}\t{:.8f}\t{:.8f}\t{}\t{}\n".format(
+            ret += "{}\t{:.8f}\t{:.8f}\t{}\t{}\t{}\n".format(
                 j, left[j], right[j], ancestor[j], population[j], child[j])
         return ret[:-1]
 
@@ -56,11 +65,43 @@ class AncestryTable(object):
         }
 
     def num_rows(self):
-        assert len(self.left) == len(self.right)
-        assert len(self.right) == len(self.ancestor)
-        assert len(self.ancestor) == len(self.population)
-        assert len(self.population) == len(self.child)
+        check_row_lengths(
+            self.left, self.right, self.population, self.child, self.ancestor)
         return len(self.left)
+
+    # def __eq__(self, other):
+    #     ret = False
+    #     if type(other) is type(self):
+    #         # TODO: Expand on this later
+    #         ret = True
+    #     return ret
+
+    def add_row(self, left, right, population, child, ancestor = -1):
+        # left = left.astype(np.float64)
+        # assert type(left) is np.float64
+        # assert type(right) == np.float64
+        # assert type(ancestor) == np.int32
+        # assert type(population) == np.int32
+        # assert type(child) == np.int32
+        self.left = np.append(self.left, left)
+        self.right = np.append(self.right, right)
+        self.ancestor = np.append(self.ancestor, ancestor)
+        self.population = np.append(self.population, population)
+        self.child = np.append(self.child, child)
+        self.num_rows += 1
+
+    def set_columns(self, left, right, population, child, ancestor=None):
+        if ancestor is None:
+            ancestor = np.repeat(-1, len(left))
+        check_row_lengths(left, right, population, child, ancestor)
+        self.left = np.asarray(left, dtype = np.float64)
+        self.right = np.asarray(right, dtype = np.float64)
+        self.population = np.asarray(population, dtype=np.int32)
+        self.child = np.asarray(child, dtype=np.int32)
+        self.ancestor = np.asarray(ancestor, dtype=np.int32)
+        self.num_rows = len(left)
+
+
 
 
     # @property
@@ -95,8 +136,8 @@ class AncestryTable(object):
     #             j, left[j], right[j], parent[j], child[j])
     #     return ret[:-1]
 
-    def add_row(self, left, right, ancestor, population, child):
-        return self.ll_table.add_row(left, right, ancestor, population, child)
+    # def add_row(self, left, right, ancestor, population, child):
+    #     return self.ll_table.add_row(left, right, ancestor, population, child)
 
 
 # # Classes.

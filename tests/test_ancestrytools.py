@@ -4,11 +4,40 @@ import msprime, tskit
 
 class TestAncestryTableClass(unittest.TestCase):
 
-    def test_initialize(self):
+    def test_initialize_works(self):
         tab = slime.AncestryTable()
-        print(tab)
-        # print(dir(tab))
-        # tab.add_row(left=0, right=1, ancestor=6, population=1, child=0)
+        self.assertEqual(tab.num_rows, 0)
+
+    def test_add_row(self):
+        tab = slime.AncestryTable()
+        tab.add_row(0, 1, 0, 1, 5)
+        self.assertEqual(tab.num_rows, 1)
+
+    def test_add_row_no_ancestors(self):
+        tab = slime.AncestryTable()
+        tab.add_row(0, 1, 0, 1)
+        self.assertEqual(tab.num_rows, 1)
+        self.assertEqual(tab.ancestor, [-1])
+
+    def test_set_columns(self):
+        tab = slime.AncestryTable()
+        tab.set_columns(
+            left = [0, 0, 0, 0],
+            right = [1, 1, 1, 1],
+            population = [0, 1, 0, 1],
+            child = [0, 1, 2, 3],
+            ancestor = [4, 5, 6, 7])
+        self.assertEqual(tab.num_rows, 4)
+
+    def test_set_columns_no_ancestors(self):
+        tab = slime.AncestryTable()
+        tab.set_columns(
+            left = [0, 0, 0, 0],
+            right = [1, 1, 1, 1],
+            population = [0, 1, 0, 1],
+            child = [0, 1, 2, 3])
+        self.assertEqual(tab.num_rows, 4)  
+        self.assertEqual(list(tab.ancestor), [-1, -1, -1, -1])
 
 # class TestAncestryTables(unittest.TestCase):
 
