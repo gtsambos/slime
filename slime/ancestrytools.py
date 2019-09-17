@@ -1,10 +1,7 @@
 #!/usr/bin/env python 
 import tskit, msprime
-import heapq
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.patches import Polygon
 import collections
 
 
@@ -69,20 +66,7 @@ class AncestryTable(object):
             self.left, self.right, self.population, self.child, self.ancestor)
         return len(self.left)
 
-    # def __eq__(self, other):
-    #     ret = False
-    #     if type(other) is type(self):
-    #         # TODO: Expand on this later
-    #         ret = True
-    #     return ret
-
     def add_row(self, left, right, population, child, ancestor = -1):
-        # left = left.astype(np.float64)
-        # assert type(left) is np.float64
-        # assert type(right) == np.float64
-        # assert type(ancestor) == np.int32
-        # assert type(population) == np.int32
-        # assert type(child) == np.int32
         self.left = np.append(self.left, left)
         self.right = np.append(self.right, right)
         self.ancestor = np.append(self.ancestor, ancestor)
@@ -102,7 +86,12 @@ class AncestryTable(object):
         self.num_rows = len(left)
 
 
-
+def get_ancestry_table(ts, samples, populations, keep_ancestors=False):
+    """
+    For a given tree sequence, list of samples and populations, extracts
+    an AncestryTable showing local ancestry.
+    """
+    print(list(ts.nodes()))
 
     # @property
     # def left(self):
