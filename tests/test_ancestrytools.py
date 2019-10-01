@@ -3,6 +3,7 @@ import unittest
 import msprime, tskit
 import collections
 import numpy as np
+import io
 
 class TestAncestryTableClass(unittest.TestCase):
 
@@ -44,6 +45,63 @@ class TestAncestryTableClass(unittest.TestCase):
 
 class TestGetAncestryTables(unittest.TestCase):
 
+    # Tree sequence  | Population
+    #     4          | 2
+    #    / \         |
+    #   /   3        | 1
+    #  /   / \       |
+    # 0   1   2      | 0
+    nodes0 = io.StringIO("""\
+    id      is_sample   population      time
+    0       1       0               0.00000000000000
+    1       1       0               0.00000000000000
+    2       1       0               0.00000000000000
+    3       0       1               1.00000000000000
+    4       0       2               2.00000000000000
+    """)
+    edges0 = io.StringIO("""\
+    id      left            right           parent  child
+    0       0.00000000      1.00000000      3       1,2
+    1       0.00000000      1.00000000      4       0,3
+    """)
+
+    # Tree sequence                                       | Population
+    #          9                        10                | 3
+    #         / \                      / \                |
+    #        /   \                    /   8               | 2
+    #       /     \                  /   / \              |
+    #      7       \                /   /   \             | 1
+    #     / \       6              /   /     6            | 0
+    #    /   5     / \            /   5     / \           | 0
+    #   /   / \   /   \          /   / \   /   \          |
+    #  4   0   1 2     3        4   0   1 2     3         | 0
+    #
+    # 0 ------------------ 0.5 ------------------ 1.0
+
+    nodes1 = io.StringIO("""\
+    id      is_sample   population      time
+    0       1       0               0.00000000000000
+    1       1       0               0.00000000000000
+    2       1       0               0.00000000000000
+    3       1       0               0.00000000000000
+    4       1       0               0.00000000000000
+    5       0       0               0.14567111023387
+    6       0       0               0.21385545626353
+    7       0       1               0.43508024345063
+    8       0       2               0.60156352971203
+    9       0       3               0.90000000000000
+    10      0       3               1.20000000000000
+    """)
+    edges1 = io.StringIO("""\
+    id      left            right           parent  child
+    0       0.00000000      1.00000000      5       0,1
+    1       0.00000000      1.00000000      6       2,3
+    2       0.00000000      0.50000000      7       4,5
+    3       0.50000000      1.00000000      8       5,6
+    4       0.00000000      0.50000000      9       6,7
+    5       0.50000000      1.00000000      10      4,8
+    """)
+
     # A simple example to test on.
     pop_configs_ex = [
     msprime.PopulationConfiguration(sample_size=3, initial_size = 500, growth_rate = 0),
@@ -64,7 +122,7 @@ class TestGetAncestryTables(unittest.TestCase):
         random_seed= 23)
 
     samples_ex = ts_ex.samples()
-    populations_ex = ts_ex.populations()
+    populations_ex = [0, 1]
 
     # Here's the ancestry table (unsorted) 
     #     id  left        right       parent  child
@@ -79,6 +137,84 @@ class TestGetAncestryTables(unittest.TestCase):
     # 11  898.33110615    1000.00000000   0  1
 
     def test_simple_case(self):
-        slime.get_ancestry_table(self.ts_ex, self.samples_ex, self.populations_ex)
+        tab = slime.get_ancestry_table(self.ts_ex, list(self.populations_ex))
+        # print(tab)
 
+
+    def test_simple_example(self):
+        ts = tskit.load_text(nodes=self.nodes0, edges=self.edges0, strict=False)
+        tab = slime.get_ancestry_table(ts, [1, 2])
+        self.assertEqual(list(tab.left), [0, 0, 0])
+        self.assertEqual(list(tab.right), [1, 1, 1])
+        self.assertEqual(list(tab.population), [2, 1, 1])
+        self.assertEqual(list(tab.child), [0, 1, 2])
+
+    def test_one_population(self):
+        ts = tskit.load_text(nodes=self.nodes0, edges=self.edges0, strict=False)
+        tab = slime.get_ancestry_table(ts, [1, 3])
+        self.assertEqual(list(tab.left), [0, 0])
+        self.assertEqual(list(tab.right), [1, 1])
+        self.assertEqual(list(tab.population), [1, 1])
+        self.assertEqual(list(tab.child), [1, 2])
+
+    def test_no_rows(self):
+        ts = tskit.load_text(nodes=self.nodes0, edges=self.edges0, strict=False)
+        tab = slime.get_ancestry_table(ts, samples=[0], populations=[1])
+        self.assertEqual(tab.num_rows, 0)
+
+    def test_no_ancestors(self):
+        ts = tskit.load_text(nodes=self.nodes0, edges=self.edges0, strict=False)
+        with self.assertRaises(ValueError):
+            slime.get_ancestry_table(ts, samples=[0], populations=[3])
+
+    def test_some_samples_have_relevant_population_labels(self):
+        # Tree sequence  | Population
+        #     4          | 2
+        #    / \         |
+        #   /   3        | 1
+        #  /   / \       |
+        # 0   1   2      | 0, 1, 2
+        nodes = io.StringIO("""\
+        id      is_sample   population      time
+        0       1       0               0.00000000000000
+        1       1       1               0.00000000000000
+        2       1       2               0.00000000000000
+        3       0       1               1.00000000000000
+        4       0       2               2.00000000000000
+        """)
+        edges = io.StringIO("""\
+        id      left            right           parent  child
+        0       0.00000000      1.00000000      3       1,2
+        1       0.00000000      1.00000000      4       0,3
+        """)
+        ts = tskit.load_text(nodes=nodes, edges=edges, strict=False)
+        tab = slime.get_ancestry_table(ts, populations=[1, 2])
+        self.assertEqual(list(tab.left), [0, 0, 0])
+        self.assertEqual(list(tab.right), [1, 1, 1])
+        self.assertEqual(list(tab.population), [2, 1, 2])
+        self.assertEqual(list(tab.child), [0, 1, 2])
+
+    def test_multiple_trees(self):
+        ts = tskit.load_text(nodes=self.nodes1, edges=self.edges1, strict=False)
+        tab = slime.get_ancestry_table(ts, [1, 2, 3])
+        self.assertEqual(list(tab.left), [0, .5, 0, .5, 0, .5, 0, .5, 0, .5])
+        self.assertEqual(list(tab.right), [.5, 1, .5, 1, .5, 1, .5, 1, .5, 1])
+        self.assertEqual(list(tab.population), [1, 2, 1, 2, 3, 2, 3, 2, 1, 3])
+        self.assertEqual(list(tab.child), [0, 0, 1, 1, 2, 2, 3, 3, 4, 4])
+
+    def test_multiple_trees_edges_are_squashed(self):
+        ts = tskit.load_text(nodes=self.nodes1, edges=self.edges1, strict=False)
+        tab = slime.get_ancestry_table(ts, [3])
+        self.assertEqual(list(tab.left), [0, 0, 0, 0, 0])
+        self.assertEqual(list(tab.right), [1, 1, 1, 1, 1])
+        self.assertEqual(list(tab.population), [3, 3, 3, 3, 3])
+        self.assertEqual(list(tab.child), [0, 1, 2, 3, 4])
+
+    def test_multiple_trees_some_missing_segments(self):
+        ts = tskit.load_text(nodes=self.nodes1, edges=self.edges1, strict=False)
+        tab = slime.get_ancestry_table(ts, [1, 2])
+        self.assertEqual(list(tab.left), [0, .5, 0, .5, .5, .5, 0])
+        self.assertEqual(list(tab.right), [.5, 1, .5, 1, 1, 1, .5])
+        self.assertEqual(list(tab.population), [1, 2, 1, 2, 2, 2, 1])
+        self.assertEqual(list(tab.child), [0, 0, 1, 1, 2, 3, 4])
 
