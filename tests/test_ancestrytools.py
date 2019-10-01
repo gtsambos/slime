@@ -218,3 +218,36 @@ class TestGetAncestryTables(unittest.TestCase):
         self.assertEqual(list(tab.population), [1, 2, 1, 2, 2, 2, 1])
         self.assertEqual(list(tab.child), [0, 0, 1, 1, 2, 3, 4])
 
+    def verify(self, ts, samples, populations):
+        tab = slime.get_ancestry_table(ts, populations=populations, samples=samples)
+        # Loop through the rows of the ancestral branch table.
+        for row in range(0, tab.num_rows):
+            current_sample = tab.child[row]
+            current_left = tab.left[row]
+            current_right = tab.right[row]
+            current_pop = ts.tables.nodes.population[current_sample]
+            if current_pop in populations:
+                self.assertEqual(tab.population[row], current_pop)
+            else:
+                for tree in ts.trees():
+                    if tree.interval[0] >= current_right:
+                        break
+                    while tree.interval[1] <= current_left:
+                        tree.next()
+                    # Check that that most recent node from a relevant population has the
+                    # same population ID as listed in the ancestor table.
+                    par = tree.get_parent(current_sample)
+                    ancestor_pop = ts.tables.nodes.population[par]
+                    while ancestor_pop not in populations:
+                        par = tree.get_parent(par)
+                        ancestor_pop = ts.tables.nodes.population[par]
+                    self.assertEqual(tab.population[current_sample], ancestor_pop)
+
+
+    def test_simple_case(self):
+        self.verify(self.ts_ex, list(self.ts_ex.samples()), list(self.populations_ex))
+        self.verify(self.ts_ex, list(self.ts_ex.samples()), [0])
+
+
+
+
