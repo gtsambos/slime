@@ -241,13 +241,49 @@ class TestGetAncestryTables(unittest.TestCase):
                     while ancestor_pop not in populations:
                         par = tree.get_parent(par)
                         ancestor_pop = ts.tables.nodes.population[par]
-                    self.assertEqual(tab.population[current_sample], ancestor_pop)
+                    self.assertEqual(tab.population[row], ancestor_pop)
 
 
     def test_simple_case(self):
         self.verify(self.ts_ex, list(self.ts_ex.samples()), list(self.populations_ex))
         self.verify(self.ts_ex, list(self.ts_ex.samples()), [0])
 
+    def test_admixture_two_populations(self):
+        pop0 = msprime.PopulationConfiguration(
+            sample_size=20, initial_size = 500, growth_rate = 0.00)
+        pop1 = msprime.PopulationConfiguration(
+            sample_size=0, initial_size = 500, growth_rate = 0.00)
+        admixture_event  = msprime.MassMigration(
+            time=50, source=0, dest=1, proportion=0.5)
+        migration_rate_change = msprime.MigrationRateChange(
+            time=500, rate=0.01, matrix_index=(0, 1))
+        ts = msprime.simulate(
+                population_configurations = [pop0, pop1], 
+                length = 1000, 
+                demographic_events = [admixture_event, migration_rate_change], 
+                random_seed = 23, 
+                recombination_rate = 5e-6)
+        self.verify(ts, list(ts.samples()), [1])
 
-
+    def test_admixture_five_populations(self):
+        pop0 = msprime.PopulationConfiguration(
+            sample_size=20, initial_size = 500, growth_rate = 0.00)
+        pop1 = msprime.PopulationConfiguration(
+            sample_size=0, initial_size = 500, growth_rate = 0.00)
+        pop2 = msprime.PopulationConfiguration(
+            sample_size=0, initial_size = 500, growth_rate = 0.00)
+        pop3 = msprime.PopulationConfiguration(
+            sample_size=0, initial_size = 500, growth_rate = 0.00)
+        pop4 = msprime.PopulationConfiguration(
+            sample_size=0, initial_size = 500, growth_rate = 0.00)
+        migration_rate_change = msprime.MigrationRateChange(
+            time=500, rate=0.01)
+        ts = msprime.simulate(
+                population_configurations = [pop0, pop1, pop2, pop3, pop4], 
+                length = 1000, 
+                demographic_events = [migration_rate_change], 
+                random_seed = 3536, 
+                recombination_rate = 1e-6)
+        self.verify(ts, list(ts.samples()), [1, 2, 3, 4])
+        self.verify(ts, list(ts.samples()), [2, 4])
 
