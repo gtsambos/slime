@@ -13,27 +13,11 @@ Welcome to slime's documentation!
    :hidden:
 
    introduction/introduction
+   introduction/installation
    recenthistory/recenthistory
+   ancestrytables/ancestrytables
 
 
 .. include:: introduction/introduction.rst
 
-
-Installation
-============
-
-Ensure you have ``pip`` installed and type this into your command line::
-
-	pip install -i https://test.pypi.org/simple/ slime
-
-
-You will also need to install SLiM. Instructions are here:
-
-`https://messerlab.org/slim/ <https://messerlab.org/slim/>`_
-
-.. The basic procedure
-.. ===================
-.. You must have a SLiM script describing the recent history of admixture.
-.. In slime, we provide a script generator that allows you to generate these scripts for
-.. a flexible range of situations in Python.
-
+.. include:: introduction/installation.rst
