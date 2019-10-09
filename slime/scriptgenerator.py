@@ -8,8 +8,32 @@ import subprocess
 import itertools
 
 class RecentHistory(object):
-    """Creates a SLiM script of recent history that the user
-    can feed into SLiMe."""
+    """
+    An object holding demographic history that can be converted into
+    a SLiM script.
+
+    :ivar final_gen: The number of generations to simulate.
+    :vartype final_gen: int
+    :ivar chrom_length: The number of bases in the simulated segment.
+    :vartype chrom_length: int
+    :ivar reference_configs: Configurations of the ancestral populations.
+    :vartype reference_configs: slime.PopulationConfiguration
+    :ivar adm_configs: Configurations of the admixed population.
+    :vartype adm_configs: slime.PopulationConfiguration
+    :ivar prop: The initial proportion of admixture from each reference population.
+    :vartype prop: list, dtype=float
+    :ivar recombination: Recombination rate or recombination map.
+    :vartype recombination: float or recombination map (FORMAT?)
+    :ivar ref_labels:
+    :ivar adm_label:
+    :ivar reference_populations:
+    :ivar admixed_population:
+    :ivar mutations:
+    :ivar outfile: The filename to which to write the outputted tree sequence.
+    :ivar model_type: To be removed.
+    :ivar scriptfile: The filename to which to write the SLiM script. 
+
+    """
     def __init__(self, final_gen, chrom_length, reference_configs, adm_configs, prop,
         recombination=0, ref_labels=None, adm_label=None, reference_populations=None,
         admixed_population=None, mutations=None, outfile='recent-history.trees',
@@ -723,7 +747,14 @@ class MutationTypes(object):
 
 class PopulationConfiguration(object):
     """
-    Analogue of msprime.PopulationConfiguration objects.
+    Holds information about the populations in the simulation.
+    The analogue of msprime.PopulationConfiguration objects.
+
+    :ivar initial_size: The number of haploids in the population at the start of the simulation.
+    :vartype initial_size: int
+    :ivar sample_size: Think -- IS THIS NEEDED???
+    :ivar growth_rate: The initial growth rate. (GIVEN AS EXPONENT??)
+    :vartype growth_rate: float
     """
     def __init__(self, initial_size, sample_size = None, growth_rate = 0):
         self.initial_size = initial_size

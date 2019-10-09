@@ -1,9 +1,9 @@
 
 .. _sec_recenthistory:
 
-======================================
-1. Specifying the history of admixture
-======================================
+==========
+Simulation
+==========
 
 Don't know how to program in Eidos?
 Don't worry!
@@ -18,6 +18,7 @@ Contents of this section:
  * :ref:`sec_recenthistory_mutations`
  * :ref:`sec_recenthistory_growth`
  * :ref:`sec_recenthistory_migration`
+ * :ref:`sec_simulation_api`
 
 
 .. include:: recenthistory_quickstart.rst
@@ -29,6 +30,8 @@ Contents of this section:
 .. include:: recenthistory_growth.rst
 
 .. include:: recenthistory_migration.rst
+
+.. include:: simulation_api.rst
 
 
 
