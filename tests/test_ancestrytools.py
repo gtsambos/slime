@@ -244,7 +244,7 @@ class TestGetAncestryTables(unittest.TestCase):
                     self.assertEqual(tab.population[row], ancestor_pop)
 
 
-    def test_simple_case(self):
+    def test_simple_simulated_case(self):
         self.verify(self.ts_ex, list(self.ts_ex.samples()), list(self.populations_ex))
         self.verify(self.ts_ex, list(self.ts_ex.samples()), [0])
 
