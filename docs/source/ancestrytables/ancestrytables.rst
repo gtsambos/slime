@@ -8,13 +8,8 @@ Ancestry tables
 Contents of this section:
 
 * :ref: `sec_ancestrytables_intro`
+* :ref: `sec_ancestrytables_api`
 
 .. include:: ancestrytables_intro.rst
-
-
-API
-===
-
-.. automodule:: ancestrytools
-   :members:
+.. include:: ancestrytables_api.rst
 

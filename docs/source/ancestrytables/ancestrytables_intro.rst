@@ -1,6 +1,5 @@
 .. _sec_ancestrytables_intro:
 
-
 *************************
 What are ancestry tables?
 *************************
@@ -39,19 +38,3 @@ populations,
 
 Identity-by-descent
 -------------------
-
-
-
-
-The API
-*******
-
-slime.AncestryTable()
-
-    For a given set of samples and populations or ancestors, 
-    MORE LATER
-
-    :ivar left: The array of left coordinates.
-    :vartype left: numpy.ndarray, dtype=np.float64
-    :ivar right: The array of right coordinates.
-    :vartype right: numpy.ndarray, dtype=np.float64
