@@ -6,3 +6,4 @@ API
 
 .. automodule:: ancestrytools
    :members:
+   :noindex:

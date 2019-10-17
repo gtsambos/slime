@@ -12,6 +12,7 @@
 #
 import os
 import sys
+import mock
 sys.path.insert(0, os.path.abspath('../../slime'))
 
 
@@ -27,6 +28,10 @@ release = '0.0.1'
 
 # -- General configuration ---------------------------------------------------
 
+# MOCK_MODULES = ['numpy', 'numpy.core', 'numpy.core.multiarray']
+# for mod_name in MOCK_MODULES:
+#     sys.modules[mod_name] = mock.Mock()
+autodoc_mock_imports = ["msprime", "pyslim", "pandas"]
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -35,6 +40,9 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo'
 ]
+
+# Modules to be mocked.
+# autodoc_mock_imports = ["numpy", "numpy.core.multiarray", "tskit", "pandas"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -45,7 +53,6 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 # Master ("home") document
-
 master_doc = 'index'
 
 # -- Options for HTML output -------------------------------------------------
@@ -58,7 +65,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 
 # Show same sidebar on all pages.
 # See https://stackoverflow.com/questions/18969093/how-to-include-the-toctree-in-the-sidebar-of-each-page

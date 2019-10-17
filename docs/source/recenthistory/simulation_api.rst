@@ -6,3 +6,4 @@ API
 
 .. automodule:: scriptgenerator
    :members:
+   :noindex:
