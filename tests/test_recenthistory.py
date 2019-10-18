@@ -347,7 +347,30 @@ class TestDemographyConfig(unittest.TestCase):
             prop=[0.3,0.7], mutations=muts)
         # script.print_script()
         script.run_slim(verbose=False)
-        
+
+class TestCorrectOutput(unittest.TestCase):
+    """
+    Tests that the output produced by slime is as expected.
+    """
+    ref0_config = slime.PopulationConfiguration(initial_size=10, growth_rate=0)
+    ref1_config = slime.PopulationConfiguration(initial_size=15, growth_rate=0)
+    adm_config = slime.PopulationConfiguration(sample_size=5, initial_size=5, growth_rate = 0)
+    adm_props = [0.3, 0.7]
+    rho = 0.1
+    length = 10
+    gens = 15
+    script = slime.RecentHistory(final_gen=gens, chrom_length=length,
+        reference_configs=[ref0_config, ref1_config], adm_configs=adm_config,
+        prop=adm_props, recombination=.001)
+    script.run_slim(verbose=False)
+    # script.print_script()
+    # Check output.
+    ts = tskit.load("recent-history.trees")
+
+    def test_population_size(self):
+        self.assertEqual(len(self.ts.samples(0)), 20)
+        self.assertEqual(len(self.ts.samples(1)), 30)
+        self.assertEqual(len(self.ts.samples(2)), 10)
 
 class TestExamplesInDocs(unittest.TestCase):
     """
